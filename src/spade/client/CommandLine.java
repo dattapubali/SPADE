@@ -27,11 +27,13 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -50,7 +52,7 @@ import static spade.analyzer.CommandLine.getQueryCommands;
 public class CommandLine
 {
     private static PrintStream clientOutputStream;
-    private static ObjectInputStream clientInputStream;
+    private static BufferedReader clientInputStream;
     private static final String SPADE_ROOT = Settings.getProperty("spade_root");
     private static final String historyFile = SPADE_ROOT + "cfg/query.history";
     private static final String COMMAND_PROMPT = "-> ";
@@ -110,7 +112,7 @@ public class CommandLine
 
             OutputStream outStream = remoteSocket.getOutputStream();
             InputStream inStream = remoteSocket.getInputStream();
-            clientInputStream = new ObjectInputStream(inStream);
+            clientInputStream = new BufferedReader(new InputStreamReader(inStream));
             clientOutputStream = new PrintStream(outStream);
         }
         catch (NumberFormatException | IOException ex)
@@ -123,11 +125,6 @@ public class CommandLine
         try
         {
             System.out.println("SPADE 3.0 Query Client");
-            if(AbstractQuery.getCurrentStorage() == null)
-            {
-                System.out.println("No storage set for querying. Use command: 'set storage <storage_name>'");
-            }
-
             // Set up command history and tab completion.
             ConsoleReader commandReader = new ConsoleReader();
             try
@@ -145,65 +142,28 @@ public class CommandLine
                 {
                     System.out.print(COMMAND_PROMPT);
                     String line = commandReader.readLine();
-
                     if(line.equals(QueryCommands.QUERY_EXIT.value))
                     {
                         clientOutputStream.println(line);
                         break;
                     }
-                    else if(AbstractQuery.getCurrentStorage() == null)
+                    else if(line.toLowerCase().startsWith("export"))
                     {
-                        System.out.println("No storage set for querying. Use command: 'set storage <storage_name>'");
-                        continue;
+                        // save export path for next answer's dot file
+                        parseExport(line);
                     }
-                    else if(line.equals(QueryCommands.QUERY_LIST_CONSTRAINTS.value))
+                    else
                     {
-                        System.out.println("-------------------------------------------------");
-                        System.out.println("Constraint Name\t\t | Constraint Expression");
-                        System.out.println("-------------------------------------------------");
-                        for (Map.Entry<String, String> currentEntry : constraints.entrySet())
-                        {
-                            String key = currentEntry.getKey();
-                            String value = currentEntry.getValue();
-                            System.out.println(key + "\t\t\t | " + value);
-                        }
-                        System.out.println("-------------------------------------------------");
-                        System.out.println();
-                    }
-                    else if(line.contains(":"))
-                    {
-                        // probably a constraint
-                        createConstraint(line);
-                    }
-                    else if(line.contains("("))
-                    {
-                        // send line to analyzer
-                        String query = parseQuery(line);
                         if(RESULT_EXPORT_PATH != null)
                         {
-                            query = "export " + query;
+                            line = "export " + line;
                         }
-                        long start_time = System.currentTimeMillis();
-                        clientOutputStream.println(query);
-                        String returnTypeName = (String) clientInputStream.readObject();
-                        if(returnTypeName.equalsIgnoreCase("error"))
-                        {
-                            System.out.println("Error executing query request!");
-                            continue;
-                        }
-                        Class<?> returnType = Class.forName(returnTypeName);
-                        Object result = clientInputStream.readObject();
-                        String resultString = "";
-                        if(returnType.isAssignableFrom(result.getClass()))
-                        {
-                            resultString = result.toString();
-                        }
-                        long elapsed_time = System.currentTimeMillis() - start_time;
-                        System.out.println("Time taken for query: " + elapsed_time + " ms");
+                        clientOutputStream.println(line);
+                        String result = clientInputStream.readLine();
                         if(RESULT_EXPORT_PATH != null)
                         {
                             FileWriter writer = new FileWriter(RESULT_EXPORT_PATH, false);
-                            writer.write(resultString);
+                            writer.write(result);
                             writer.flush();
                             writer.close();
                             System.out.println("Output exported to file: " + RESULT_EXPORT_PATH);
@@ -211,26 +171,9 @@ public class CommandLine
                         }
                         else
                         {
+                            System.out.println(result);
                             System.out.println();
-                            System.out.println("Result:");
-                            System.out.println("Return type: " + returnTypeName);
-                            System.out.println("Result value: " + resultString);
-                            System.out.println("------------------");
                         }
-                    }
-                    else if(line.toLowerCase().startsWith("export"))
-                    {
-                        // save export path for next answer's dot file
-                        parseExport(line);
-                    }
-                    else if(line.toLowerCase().startsWith("set"))
-                    {
-                        // set storage for querying
-                        parseSetStorage(line);
-                    }
-                    else
-                    {
-                        System.out.println("Invalid input!");
                     }
                 }
                 catch (Exception ex)
@@ -242,34 +185,6 @@ public class CommandLine
         catch (IOException ex)
         {
             System.err.println(CommandLine.class.getName() + " Error in CommandLine Client! " + ex);
-        }
-    }
-
-    private static void parseSetStorage(String line)
-    {
-        try
-        {
-            String[] tokens = line.split("\\s+");
-            String setCommand = tokens[0].toLowerCase().trim();
-            String storageCommand = tokens[1].toLowerCase().trim();
-            String storageName = tokens[2].toLowerCase().trim();
-            if(setCommand.equals("set") && storageCommand.equals("storage"))
-            {
-                AbstractStorage storage = Kernel.getStorage(storageName);
-                if(storage != null)
-                {
-                    AbstractQuery.setCurrentStorage(storage);
-                    System.out.println("Storage '" + storageName + "' successfully set for querying.");
-                }
-                else
-                {
-                    System.out.println("Storage '" + tokens[2] + "' not found");
-                }
-            }
-        }
-        catch(Exception ex)
-        {
-            System.err.println(CommandLine.class.getName() + " Error setting storages!");
         }
     }
 
@@ -291,32 +206,5 @@ public class CommandLine
         {
             System.err.println(CommandLine.class.getName() + " Insufficient arguments!");
         }
-    }
-
-    private static void createConstraint(String line)
-    {
-        String[] tokens = line.split(":");
-        String constraint_name = tokens[0].trim();
-        String constraint_expression = tokens[1].trim();
-        constraints.put(constraint_name, constraint_expression);
-        System.out.println("Constraint '" + constraint_name + "' created.");
-    }
-
-    private static String parseQuery(String line)
-    {
-        int start_index = line.indexOf('(') + 1;
-        int end_index = line.indexOf(')');
-        String query = line.substring(start_index, end_index);
-        for(Map.Entry<String, String> constraint: constraints.entrySet())
-        {
-            String constraint_name = constraint.getKey();
-            String constraint_expression = constraint.getValue();
-            if(query.contains(constraint_name))
-            {
-                query = query.replaceAll("\\b" + Pattern.quote(constraint_name) + "\\b", constraint_expression);
-            }
-        }
-
-        return line.replace(line.substring(start_index, end_index), query);
     }
 }

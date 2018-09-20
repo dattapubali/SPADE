@@ -16,10 +16,12 @@
  */
 package spade.analyzer;
 
+import com.google.common.annotations.VisibleForTesting;
 import spade.client.QueryMetaData;
 import spade.core.AbstractAnalyzer;
 import spade.core.AbstractEdge;
 import spade.core.AbstractQuery;
+import spade.core.AbstractStorage;
 import spade.core.AbstractVertex;
 import spade.core.Graph;
 import spade.core.Kernel;
@@ -31,11 +33,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -55,6 +57,8 @@ import static spade.core.AbstractStorage.scaffold;
  */
 public class CommandLine extends AbstractAnalyzer
 {
+    private static HashMap<String, String> constraints = new HashMap<>();
+
     // Strings for new query format
     public enum QueryCommands
     {
@@ -181,26 +185,55 @@ public class CommandLine extends AbstractAnalyzer
             {
                 OutputStream outStream = querySocket.getOutputStream();
                 InputStream inStream = querySocket.getInputStream();
-                ObjectOutputStream queryOutputStream = new ObjectOutputStream(outStream);
+                PrintStream queryOutputStream = new PrintStream(outStream);
                 BufferedReader queryInputStream = new BufferedReader(new InputStreamReader(inStream));
 
                 while(!SHUTDOWN)
                 {
                     // Commands read from the input stream and executed.
                     String line = queryInputStream.readLine();
+                    long start_time = System.currentTimeMillis();
                     if(line.equalsIgnoreCase(QueryCommands.QUERY_EXIT.value))
                     {
                         break;
                     }
+                    else if(line.toLowerCase().startsWith("set"))
+                    {
+                        // set storage for querying
+                        String output = parseSetStorage(line);
+                        queryOutputStream.println(output);
+                    }
+                    else if(AbstractQuery.getCurrentStorage() == null)
+                    {
+                        String message = "No storage set for querying. " +
+                                "Use command: 'set storage <storage_name>'";
+                        queryOutputStream.println(message);
+                    }
+                    else if(line.equals(QueryCommands.QUERY_LIST_CONSTRAINTS.value))
+                    {
+                        StringBuilder output = new StringBuilder(100);
+                        output.append("Constraint Name\t\t | Constraint Expression\n");
+                        output.append("-------------------------------------------------\n");
+                        for(Map.Entry<String, String> currentEntry : constraints.entrySet())
+                        {
+                            String key = currentEntry.getKey();
+                            String value = currentEntry.getValue();
+                            output.append(key).append("\t\t\t | ").append(value).append("\n");
+                        }
+                        output.append("-------------------------------------------------");
+                        queryOutputStream.println(output.toString());
+                    }
+                    else if(line.contains(":"))
+                    {
+                        // hoping its a constraint
+                        String output = createConstraint(line);
+                        queryOutputStream.println(output);
+                    }
                     else
                     {
+                        line = prepareQuery(line);
                         try
                         {
-                            if(AbstractQuery.getCurrentStorage() == null)
-                            {
-                                String message = "No storage available to query!";
-                                throw new Exception(message);
-                            }
                             boolean parse_successful = parseQuery(line.trim());
                             if(!parse_successful)
                             {
@@ -276,13 +309,11 @@ public class CommandLine extends AbstractAnalyzer
                                     {
                                         temp_result.edgeSet().addAll((Set<AbstractEdge>) result);
                                         result = temp_result;
-                                    }
-                                    else if(functionName.equalsIgnoreCase("GetVertex"))
+                                    } else if(functionName.equalsIgnoreCase("GetVertex"))
                                     {
                                         temp_result.vertexSet().addAll((Set<AbstractVertex>) result);
                                         result = temp_result;
                                     }
-                                    returnType = String.class;
                                     result = ((Graph) result).exportGraph();
                                     EXPORT_RESULT = false;
                                 }
@@ -292,30 +323,29 @@ public class CommandLine extends AbstractAnalyzer
                             {
                                 logger.log(Level.SEVERE, "Return type null or mismatch!");
                             }
-                            queryOutputStream.writeObject(returnType.getName());
+                            long elapsed_time = System.currentTimeMillis() - start_time;
+                            logger.log(Level.INFO, "Time taken for query: " + elapsed_time + " ms");
                             if(result != null)
                             {
-                                queryOutputStream.writeObject(result);
+                                queryOutputStream.println(result);
                             }
                             else
                             {
-                                queryOutputStream.writeObject("Result Empty");
+                                queryOutputStream.println("Result Empty");
                             }
                         }
                         catch(Exception ex)
                         {
                             logger.log(Level.SEVERE, "Error executing query request!", ex);
-                            queryOutputStream.writeObject("Error");
+                            queryOutputStream.println("Error");
                         }
                     }
-
                 }
                 queryInputStream.close();
                 queryOutputStream.close();
 
                 inStream.close();
                 outStream.close();
-                querySocket.close();
             }
             catch(Exception ex)
             {
@@ -334,6 +364,8 @@ public class CommandLine extends AbstractAnalyzer
             }
         }
 
+        @VisibleForTesting
+        // For the purpose of testing in discrepancy detection
         private void modifyResult(Graph result)
         {
             try
@@ -377,8 +409,7 @@ public class CommandLine extends AbstractAnalyzer
                     result.edgeSet().remove(edgesToRemove.get(i));
                 }
 
-            }
-            catch(Exception ex)
+            } catch(Exception ex)
             {
                 logger.log(Level.SEVERE, "Error modifying graph result!", ex);
             }
@@ -491,6 +522,64 @@ public class CommandLine extends AbstractAnalyzer
 
             return queryMetaData;
         }
+    }
+
+    private static String createConstraint(String line)
+    {
+        String[] tokens = line.split(":");
+        String constraint_name = tokens[0].trim();
+        String constraint_expression = tokens[1].trim();
+        constraints.put(constraint_name, constraint_expression);
+        String output = "Constraint '" + constraint_name + "' created.";
+
+        return output;
+    }
+
+    private static String prepareQuery(String line)
+    {
+        int start_index = line.indexOf('(') + 1;
+        int end_index = line.indexOf(')');
+        String query = line.substring(start_index, end_index);
+        for(Map.Entry<String, String> constraint : constraints.entrySet())
+        {
+            String constraint_name = constraint.getKey();
+            String constraint_expression = constraint.getValue();
+            if(query.contains(constraint_name))
+            {
+                query = query.replaceAll("\\b" + Pattern.quote(constraint_name) + "\\b", constraint_expression);
+            }
+        }
+
+        return line.replace(line.substring(start_index, end_index), query);
+    }
+
+    private static String parseSetStorage(String line)
+    {
+        String output = null;
+        try
+        {
+            String[] tokens = line.split("\\s+");
+            String setCommand = tokens[0].toLowerCase().trim();
+            String storageCommand = tokens[1].toLowerCase().trim();
+            String storageName = tokens[2].toLowerCase().trim();
+            if(setCommand.equals("set") && storageCommand.equals("storage"))
+            {
+                AbstractStorage storage = Kernel.getStorage(storageName);
+                if(storage != null)
+                {
+                    AbstractQuery.setCurrentStorage(storage);
+                    output = "Storage '" + storageName + "' successfully set for querying.";
+                } else
+                {
+                    output = "Storage '" + tokens[2] + "' not found";
+                }
+            }
+        } catch(Exception ex)
+        {
+            output = CommandLine.class.getName() + " Error setting storages!";
+        }
+
+        return output;
     }
 }
 
