@@ -17,9 +17,7 @@
 package spade.client;
 
 import jline.ConsoleReader;
-import spade.core.AbstractQuery;
-import spade.core.AbstractStorage;
-import spade.core.Kernel;
+import org.apache.commons.lang3.StringUtils;
 import spade.core.Settings;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -27,24 +25,19 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 import static spade.analyzer.CommandLine.QueryCommands;
-import static spade.analyzer.CommandLine.getQueryCommands;
 
 /**
  * @author raza
@@ -52,7 +45,7 @@ import static spade.analyzer.CommandLine.getQueryCommands;
 public class CommandLine
 {
     private static PrintStream clientOutputStream;
-    private static BufferedReader clientInputStream;
+    private static ObjectInputStream clientInputStream;
     private static final String SPADE_ROOT = Settings.getProperty("spade_root");
     private static final String historyFile = SPADE_ROOT + "cfg/query.history";
     private static final String COMMAND_PROMPT = "-> ";
@@ -112,7 +105,7 @@ public class CommandLine
 
             OutputStream outStream = remoteSocket.getOutputStream();
             InputStream inStream = remoteSocket.getInputStream();
-            clientInputStream = new BufferedReader(new InputStreamReader(inStream));
+            clientInputStream = new ObjectInputStream(inStream);
             clientOutputStream = new PrintStream(outStream);
         }
         catch (NumberFormatException | IOException ex)
@@ -121,7 +114,6 @@ public class CommandLine
             System.err.println("Make sure that the CommandLine analyzer is running.");
             System.exit(-1);
         }
-
         try
         {
             System.out.println("SPADE 3.0 Query Client");
@@ -140,8 +132,13 @@ public class CommandLine
             {
                 try
                 {
+                    System.out.flush();
                     System.out.print(COMMAND_PROMPT);
                     String line = commandReader.readLine();
+                    if(StringUtils.isBlank(line))
+                    {
+                        continue;
+                    }
                     if(line.equals(QueryCommands.QUERY_EXIT.value))
                     {
                         clientOutputStream.println(line);
@@ -159,20 +156,27 @@ public class CommandLine
                             line = "export " + line;
                         }
                         clientOutputStream.println(line);
-                        String result = clientInputStream.readLine();
-                        if(RESULT_EXPORT_PATH != null)
+                        String result = (String) clientInputStream.readObject();
+                        if(!StringUtils.isBlank(result))
                         {
-                            FileWriter writer = new FileWriter(RESULT_EXPORT_PATH, false);
-                            writer.write(result);
-                            writer.flush();
-                            writer.close();
-                            System.out.println("Output exported to file: " + RESULT_EXPORT_PATH);
-                            RESULT_EXPORT_PATH = null;
+                            if(RESULT_EXPORT_PATH != null)
+                            {
+                                FileWriter writer = new FileWriter(RESULT_EXPORT_PATH, false);
+                                writer.write(result);
+                                writer.flush();
+                                writer.close();
+                                System.out.println("Output exported to file: " + RESULT_EXPORT_PATH);
+                                RESULT_EXPORT_PATH = null;
+                            }
+                            else
+                            {
+                                System.out.println(result);
+                                System.out.println();
+                            }
                         }
                         else
                         {
-                            System.out.println(result);
-                            System.out.println();
+                            System.out.println("No result!");
                         }
                     }
                 }

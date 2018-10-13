@@ -33,7 +33,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -185,7 +184,7 @@ public class CommandLine extends AbstractAnalyzer
             {
                 OutputStream outStream = querySocket.getOutputStream();
                 InputStream inStream = querySocket.getInputStream();
-                PrintStream queryOutputStream = new PrintStream(outStream);
+                ObjectOutputStream queryOutputStream = new ObjectOutputStream(outStream);
                 BufferedReader queryInputStream = new BufferedReader(new InputStreamReader(inStream));
 
                 while(!SHUTDOWN)
@@ -201,13 +200,13 @@ public class CommandLine extends AbstractAnalyzer
                     {
                         // set storage for querying
                         String output = parseSetStorage(line);
-                        queryOutputStream.println(output);
+                        queryOutputStream.writeObject(output);
                     }
                     else if(AbstractQuery.getCurrentStorage() == null)
                     {
                         String message = "No storage set for querying. " +
                                 "Use command: 'set storage <storage_name>'";
-                        queryOutputStream.println(message);
+                        queryOutputStream.writeObject(message);
                     }
                     else if(line.equals(QueryCommands.QUERY_LIST_CONSTRAINTS.value))
                     {
@@ -220,14 +219,14 @@ public class CommandLine extends AbstractAnalyzer
                             String value = currentEntry.getValue();
                             output.append(key).append("\t\t\t | ").append(value).append("\n");
                         }
-                        output.append("-------------------------------------------------");
-                        queryOutputStream.println(output.toString());
+                        output.append("-------------------------------------------------\n");
+                        queryOutputStream.writeObject(output.toString());
                     }
                     else if(line.contains(":"))
                     {
                         // hoping its a constraint
                         String output = createConstraint(line);
-                        queryOutputStream.println(output);
+                        queryOutputStream.writeObject(output);
                     }
                     else
                     {
@@ -327,17 +326,17 @@ public class CommandLine extends AbstractAnalyzer
                             logger.log(Level.INFO, "Time taken for query: " + elapsed_time + " ms");
                             if(result != null)
                             {
-                                queryOutputStream.println(result);
+                                queryOutputStream.writeObject(result.toString());
                             }
                             else
                             {
-                                queryOutputStream.println("Result Empty");
+                                queryOutputStream.writeObject("Result Empty");
                             }
                         }
                         catch(Exception ex)
                         {
                             logger.log(Level.SEVERE, "Error executing query request!", ex);
-                            queryOutputStream.println("Error");
+                            queryOutputStream.writeObject("Error");
                         }
                     }
                 }

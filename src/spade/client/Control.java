@@ -131,6 +131,7 @@ public class Control {
 
                     while (!shutdown)
                     {
+
                         // This thread keeps reading from the output pipe and
                         // printing to the current output stream.
                         String outputLine = SPADEControlOut.readLine();
@@ -239,6 +240,7 @@ public class Control {
             
             while (true)
             {
+                System.out.flush();
                 String line = commandReader.readLine();
                 if (line == null || line.equalsIgnoreCase("exit"))
                 {
