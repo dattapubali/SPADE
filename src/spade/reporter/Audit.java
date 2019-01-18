@@ -1377,7 +1377,8 @@ public class Audit extends AbstractReporter {
 				
 				String uidField = null;
 				if(ignoreUid){ // ignore the given uid
-					uidField = "-F uid!=" + uid + " ";
+					//uidField = "-F uid!=" + uid + " ";
+					uidField = " -F uid!=997 -F uid!=991 -F uid!=81 ";
 				}else{ // only capture the given uid
 					uidField = "-F uid=" + uid + " ";
 				}
@@ -1455,15 +1456,16 @@ public class Audit extends AbstractReporter {
 					auditRuleWithSuccess += "-S unlink -S unlinkat ";
 					auditRuleWithSuccess += "-S link -S linkat -S symlink -S symlinkat ";
 					auditRuleWithSuccess += "-S clone -S fork -S vfork -S execve ";
-					auditRuleWithSuccess += "-S open -S close -S creat -S openat -S mknodat -S mknod ";
+					//auditRuleWithSuccess += "-S open -S close -S creat -S openat -S mknodat -S mknod ";
+					auditRuleWithSuccess += "-S write -S lseek -S writev -S pwritev -S open -S close -S creat -S openat -S mknodat -S mknod ";
 					auditRuleWithSuccess += "-S dup -S dup2 -S dup3 ";
 					auditRuleWithSuccess += "-S fcntl ";
 					auditRuleWithSuccess += "-S rename -S renameat ";
-					auditRuleWithSuccess += "-S setuid -S setreuid ";
-					auditRuleWithSuccess += "-S setgid -S setregid ";
+					//auditRuleWithSuccess += "-S setuid -S setreuid ";
+					//auditRuleWithSuccess += "-S setgid -S setregid ";
 					if(!SIMPLIFY){
-						auditRuleWithSuccess += "-S setresuid -S setfsuid ";
-						auditRuleWithSuccess += "-S setresgid -S setfsgid ";
+					//	auditRuleWithSuccess += "-S setresuid -S setfsuid ";
+					//	auditRuleWithSuccess += "-S setresgid -S setfsgid ";
 					}
 					auditRuleWithSuccess += "-S chmod -S fchmod -S fchmodat ";
 					auditRuleWithSuccess += "-S pipe -S pipe2 ";

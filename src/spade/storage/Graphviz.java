@@ -99,8 +99,9 @@ public class Graphviz extends AbstractStorage
                 annotationString.append(value);
                 annotationString.append("\\n");
             }
-            String vertexString = annotationString.substring(0, annotationString.length() - 2);
-            String shape = "box";
+            //String vertexString = annotationString.substring(0, annotationString.length() - 2);
+	    String vertexString = annotationString.substring(0, annotationString.length());            
+	    String shape = "box";
             String color = "white";
             String type = incomingVertex.getAnnotation("type");
             if (type.equalsIgnoreCase("Agent")
