@@ -947,6 +947,12 @@ public class Audit extends AbstractReporter {
 								
 								List<String> ppidsToIgnore = new ArrayList<String>(pidsToIgnore); // same as pids
 								List<String> pidsToIgnoreFromConfig = getPidsFromConfig(configMap, "ignoreProcesses");
+								//Pubali
+								List<String> pidsToTrack = getPidsFromConfig(configMap,"trackProcesses");
+								if(pidsToTrack != null) {
+                                    logger.log(Level.INFO, "Pubali is tracking pids {0} for processes with names from config: {1}", new Object[]{pidsToTrack, configMap.get("trackProcesses")});
+                                }
+
 								List<String> ppidsToIgnoreFromConfig = getPidsFromConfig(configMap, "ignoreParentProcesses");
 								if(pidsToIgnoreFromConfig != null){ // optional
 									pidsToIgnore.addAll(pidsToIgnoreFromConfig);
@@ -969,7 +975,7 @@ public class Audit extends AbstractReporter {
 										success = setIptablesRules(iptablesRules);
 									}
 									if(success){
-										success = setAuditControlRules(rulesType, uid, ignoreUid, pidsToIgnore, 
+										success = setAuditControlRules(rulesType, uid, ignoreUid,pidsToTrack, pidsToIgnore,
 												ppidsToIgnore, ADD_KM);
 									}
 								}
@@ -1351,8 +1357,7 @@ public class Audit extends AbstractReporter {
 		}
 		return false;
 	}
-	private boolean setAuditControlRules(String rulesType, String uid, boolean ignoreUid, List<String> ignorePids, 
-			List<String> ignorePpids, boolean kmAdded){
+	private boolean setAuditControlRules(String rulesType, String uid, boolean ignoreUid, List<String> trackPids, List<String> ignorePids, List<String> ignorePpids, boolean kmAdded){
 		try {
 
 			if(uid == null || uid.isEmpty() || ignorePids == null || ignorePids.isEmpty()
@@ -1385,11 +1390,15 @@ public class Audit extends AbstractReporter {
 
 				StringBuffer pidFields = new StringBuffer();
 				ignorePids.forEach(ignorePid -> {pidFields.append("-F pid!=").append(ignorePid).append(" ");});
+
+				// Added by Pubali
+                StringBuffer trackPidFields = new StringBuffer();
+                trackPids.forEach(trackPid -> {trackPidFields.append("-F pid=").append(trackPid).append(" ");});
 				
 				StringBuffer ppidFields = new StringBuffer();
 				ignorePpids.forEach(ignorePpid -> {ppidFields.append("-F ppid!=").append(ignorePpid).append(" ");});
 				
-				String pidAndPpidFields = pidFields.toString() + ppidFields.toString();
+				String pidAndPpidFields = pidFields.toString() + ppidFields.toString() + trackPidFields.toString();
 				
 				List<String> auditRules = new ArrayList<String>();
 
