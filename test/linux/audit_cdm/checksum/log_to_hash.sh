@@ -3,7 +3,7 @@
 #set -x
 
 _dir=`pwd`				# Current absolute path
-_top=../..				# Relative root directory
+_top=../../../..				# Relative root directory
 
 _sconf=$_top/cfg/spade.config		# SPADE config file
 _pidfile=$_top/spade.pid		# SPADE pid file
