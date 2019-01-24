@@ -20,6 +20,7 @@
 package spade.storage;
 
 import java.io.FileWriter;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,6 +44,7 @@ public class Graphviz extends AbstractStorage
     private final int TRANSACTION_LIMIT = 1000;
     private int transaction_count;
     private String filePath;
+    private HashSet<String[]> presentEdges = null;
 
     @Override
     public boolean initialize(String arguments)
@@ -94,10 +96,15 @@ public class Graphviz extends AbstractStorage
                 if (key == null || value == null) {
                     continue;
                 }
-                annotationString.append(key);
-                annotationString.append(":");
-                annotationString.append(value);
-                annotationString.append("\\n");
+                if ((key.equals("name") || key.equals("pid") || key.equals("source") || key.equals("local address")
+                                        || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))) {
+                    annotationString.append(key);
+                    annotationString.append(":");
+                    annotationString.append(value);
+                    annotationString.append("\\n");
+                } else {
+                    continue;
+                }
             }
             //String vertexString = annotationString.substring(0, annotationString.length() - 2);
 	    String vertexString = annotationString.substring(0, annotationString.length());            
@@ -149,7 +156,21 @@ public class Graphviz extends AbstractStorage
 
     @Override
     public boolean putEdge(AbstractEdge incomingEdge) {
+
         try {
+
+            String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
+            String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
+            String type = incomingEdge.getAnnotation("type");
+            String[] edgeinfo = {srckey,dstkey,type};
+
+            if(presentEdges==null) {
+                presentEdges = new HashSet<>();
+            }
+            boolean absent = presentEdges.add(edgeinfo);
+            if(!absent)
+                return true;
+
             StringBuilder annotationString = new StringBuilder();
             for (Map.Entry<String, String> currentEntry : incomingEdge.getAnnotations().entrySet()) {
                 String key = currentEntry.getKey();
@@ -163,7 +184,7 @@ public class Graphviz extends AbstractStorage
                 annotationString.append("\\n");
             }
             String color = "black";
-            String type = incomingEdge.getAnnotation("type");
+            //String type = incomingEdge.getAnnotation("type");
             if (type.equalsIgnoreCase("Used")) {
                 color = "green";
             } else if (type.equalsIgnoreCase("WasGeneratedBy")) {
@@ -231,9 +252,6 @@ public class Graphviz extends AbstractStorage
             if (edgeString.length() > 0) {
                 edgeString = "(" + edgeString.substring(0, edgeString.length() - 2) + ")";
             }
-
-            String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
-            String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
 
             outputFile.write("\"" + srckey + "\" -> \"" + dstkey + "\" [label=\"" + edgeString.replace("\"", "'") + "\" color=\"" + color + "\" style=\"" + style + "\"];\n");
             checkTransactions();
