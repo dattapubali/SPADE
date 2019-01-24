@@ -96,7 +96,7 @@ public class Graphviz extends AbstractStorage
                 if (key == null || value == null) {
                     continue;
                 }
-                if ((key.equals("name") || key.equals("pid") || key.equals("source") || key.equals("local address")
+                if ((key.equals("name") || key.equals("pid") || key.equals("path") || key.equals("local address")
                                         || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))) {
                     annotationString.append(key);
                     annotationString.append(":");
@@ -107,7 +107,13 @@ public class Graphviz extends AbstractStorage
                 }
             }
             //String vertexString = annotationString.substring(0, annotationString.length() - 2);
-	    String vertexString = annotationString.substring(0, annotationString.length());            
+	    String vertexString = annotationString.substring(0, annotationString.length());
+
+            if(vertexString.isEmpty()) {
+                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding vertex");
+                return true;
+            }
+
 	    String shape = "box";
             String color = "white";
             String type = incomingVertex.getAnnotation("type");
