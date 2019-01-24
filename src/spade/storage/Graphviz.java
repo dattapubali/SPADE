@@ -168,8 +168,10 @@ public class Graphviz extends AbstractStorage
                 presentEdges = new HashSet<>();
             }
             boolean absent = presentEdges.add(edgeinfo);
-            if(!absent)
+            if(!absent) {
+                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding edge");
                 return true;
+            }
 
             StringBuilder annotationString = new StringBuilder();
             for (Map.Entry<String, String> currentEntry : incomingEdge.getAnnotations().entrySet()) {
