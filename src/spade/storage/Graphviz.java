@@ -20,8 +20,7 @@
 package spade.storage;
 
 import java.io.FileWriter;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,7 +43,7 @@ public class Graphviz extends AbstractStorage
     private final int TRANSACTION_LIMIT = 1000;
     private int transaction_count;
     private String filePath;
-    private HashSet<String[]> presentEdges = null;
+    private HashSet<List<String>> presentEdges = null;
 
     @Override
     public boolean initialize(String arguments)
@@ -168,7 +167,7 @@ public class Graphviz extends AbstractStorage
             String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
             String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
             String type = incomingEdge.getAnnotation("type");
-            String[] edgeinfo = {srckey,dstkey,type};
+            List<String> edgeinfo = Arrays.asList(srckey,dstkey,type);
 
             if(presentEdges==null) {
                 presentEdges = new HashSet<>();
