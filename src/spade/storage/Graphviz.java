@@ -44,6 +44,7 @@ public class Graphviz extends AbstractStorage
     private int transaction_count;
     private String filePath;
     private HashSet<List<String>> presentEdges = null;
+    private HashSet<String> excludedVertices = null;
 
     @Override
     public boolean initialize(String arguments)
@@ -107,9 +108,14 @@ public class Graphviz extends AbstractStorage
             }
             //String vertexString = annotationString.substring(0, annotationString.length() - 2);
 	    String vertexString = annotationString.substring(0, annotationString.length());
+            String key = Hex.encodeHexString(incomingVertex.bigHashCodeBytes());
 
+            // remove vertices if it does not have useful information
             if(vertexString.isEmpty()) {
-                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding vertex");
+                if(excludedVertices==null)
+                    excludedVertices = new HashSet<>();
+                //Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding vertex");
+                excludedVertices.add(key);
                 return true;
             }
 
@@ -143,7 +149,7 @@ public class Graphviz extends AbstractStorage
                 }
             }
 
-            String key = Hex.encodeHexString(incomingVertex.bigHashCodeBytes());
+
             outputFile.write("\"" + key + "\" [label=\"" + vertexString.replace("\"", "'") + "\" shape=\"" + shape + "\" fillcolor=\"" + color + "\"];\n");
             checkTransactions();
             return true;
@@ -166,15 +172,20 @@ public class Graphviz extends AbstractStorage
 
             String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
             String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
+
+            // if vertices are excluded then remove incoming and outgoing edges too
+            if(excludedVertices!=null && (excludedVertices.contains(srckey) || excludedVertices.contains(dstkey)))
+                return true;
             String type = incomingEdge.getAnnotation("type");
             List<String> edgeinfo = Arrays.asList(srckey,dstkey,type);
 
+            // remove duplicate edges
             if(presentEdges==null) {
                 presentEdges = new HashSet<>();
             }
             boolean absent = presentEdges.add(edgeinfo);
             if(!absent) {
-                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding edge");
+                //Logger.getLogger(Graphviz.class.getName()).log(Level.INFO,"Pubali skipped adding edge");
                 return true;
             }
 
