@@ -41,6 +41,7 @@ import spade.edge.opm.WasDerivedFrom;
 import spade.edge.opm.WasGeneratedBy;
 import spade.edge.opm.WasTriggeredBy;
 import spade.vertex.opm.Agent;
+import spade.vertex.opm.Application;
 import spade.vertex.opm.Artifact;
 import spade.vertex.opm.Process;
 
@@ -503,7 +504,10 @@ public class Graph extends AbstractStorage implements Serializable
                     vertex = new Artifact();
                 } else if (shape.equals("octagon")) {
                     vertex = new Agent();
-                } else {
+                } else if (shape.equals("parallelogram")){
+                    vertex = new Application();
+                }
+                else {
                     vertex = new Vertex();
                 }
                 String[] pairs = label.split("\\\\n");

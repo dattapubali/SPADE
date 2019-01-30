@@ -770,7 +770,7 @@ public class AuditEventReader {
         }
         int pidstart = messageData.indexOf(":");
         int pidend = messageData.indexOf("#");
-        String pid = messageData.substring(pidstart,pidend);
+        String pid = messageData.substring(pidstart+1,pidend);
 
         int sqrbracketidx = messageData.indexOf("]");
         int exeidx = messageData.indexOf("exe");

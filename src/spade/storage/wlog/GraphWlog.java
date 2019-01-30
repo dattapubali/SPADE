@@ -11,6 +11,7 @@ public class GraphWlog {
     private final static String dirpath = "/tmp/";
     private final static String lineageGraphString = "lineage.dot";
     private final static String prunedGraphString = "pruned.dot";
+    private final static String appGraftString = "appGrafted.dot";
     private final static int maxdepth = 10;
     private static Graph spadeGraph = null;
     private static Map<String,String> pidVertexMap = null;
@@ -75,9 +76,12 @@ public class GraphWlog {
             if (!v.getAnnotation("type").equalsIgnoreCase("Application")) continue;
             String relatedProcess = v.getAnnotation("pid");
             AbstractVertex procnode = spadeGraph.getVertex(pidVertexMap.get(relatedProcess));
+            System.out.println(v);
+            System.out.println(procnode);
             SimpleEdge edge = new SimpleEdge(v,procnode);
             spadeGraph.putEdge(edge);
         }
+        spadeGraph.exportGraph(dirpath + appGraftString );
     }
 
     public static void scanPidNodes(){
@@ -93,8 +97,9 @@ public class GraphWlog {
     }
 
     public static void main(String[] args){
-        importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/provenance.dot");
-        generateLineageDot("ftpbench");
-        generatePrunedDot("ftpbench");
+        importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
+        graftApplicationNodes();
+        //generateLineageDot("ftpbench");
+        //generatePrunedDot("ftpbench");
     }
 }
