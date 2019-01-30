@@ -19,6 +19,7 @@
  */
 package spade.core;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.document.Document;
@@ -431,6 +432,9 @@ public class Graph extends AbstractStorage implements Serializable
 
         vertices.addAll(graph1.vertexSet());
         vertices.removeAll(graph2.vertexSet());
+        HashSet<String> excludedVertices = new HashSet<>();
+        graph2.vertexSet().forEach(vertex -> excludedVertices.add(Hex.encodeHexString(vertex.bigHashCodeBytes())));
+
         edges.addAll(graph1.edgeSet());
         edges.removeAll(graph2.edgeSet());
 
@@ -438,6 +442,11 @@ public class Graph extends AbstractStorage implements Serializable
             resultGraph.putVertex(vertex);
         }
         for (AbstractEdge edge : edges) {
+            String srckey = Hex.encodeHexString(edge.getChildVertex().bigHashCodeBytes());
+            String dstkey = Hex.encodeHexString(edge.getParentVertex().bigHashCodeBytes());
+
+            if(excludedVertices.contains(srckey) || excludedVertices.contains(dstkey))
+                continue;
             resultGraph.putEdge(edge);
         }
 
@@ -539,6 +548,7 @@ public class Graph extends AbstractStorage implements Serializable
                 }
                 graph.putEdge(edge);
             }
+
         } catch (Exception exception) {
             logger.log(Level.SEVERE, "Error while processing line: " + line, exception);
         }

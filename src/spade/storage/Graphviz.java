@@ -97,7 +97,8 @@ public class Graphviz extends AbstractStorage
                     continue;
                 }
                 if ((key.equals("name") || key.equals("pid") || key.equals("path") || key.equals("local address")
-                                        || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))) {
+                        || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))
+                        || key.equals("log")) {
                     annotationString.append(key);
                     annotationString.append(":");
                     annotationString.append(value);
@@ -131,7 +132,12 @@ public class Graphviz extends AbstractStorage
                     || type.equalsIgnoreCase("Subject")) {
                 shape = "box";
                 color = "lightsteelblue1";
-            } else if (type.equalsIgnoreCase("Artifact")
+            }
+            else if (type.equalsIgnoreCase("Application")){
+                shape = "parallelogram";
+                color = "brown1";
+            }
+            else if (type.equalsIgnoreCase("Artifact")
                     || type.equalsIgnoreCase("Entity")
                     || type.equalsIgnoreCase("Object")) {
                 shape = "ellipse";

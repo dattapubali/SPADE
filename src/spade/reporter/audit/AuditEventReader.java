@@ -128,7 +128,9 @@ public class AuditEventReader {
 			KMODULE_FD = "fd",
 			KMODULE_SOCKTYPE = "sock_type",
 			KMODULE_LOCAL_SADDR = "local_saddr",
-			KMODULE_REMOTE_SADDR = "remote_saddr";
+			KMODULE_REMOTE_SADDR = "remote_saddr",
+	        APPLOG_DATA_KEY = "msg",
+            APPLOG_RECORD_TYPE = "applog";
 	
 	//Reporting variables
 	private boolean reportingEnabled = false;
@@ -645,6 +647,17 @@ public class AuditEventReader {
 				auditRecordKeyValues.put(RECORD_TYPE_KEY, type);
 	
 				if(type.equals(RECORD_TYPE_USER)){
+
+				    // Pubali : change code to handle injected logs by wajih
+                    int indexofApplog = messageData.indexOf(APPLOG_DATA_KEY);
+                    if(indexofApplog != -1){
+                        String data = messageData.substring(indexofApplog + APPLOG_DATA_KEY.length() + 1);
+                        data = data.substring(1, data.length() - 1);// remove quotes
+                        Map<String, String> eventData = parseApplogMsg(data);
+                        eventData.put(RECORD_TYPE_KEY, APPLOG_RECORD_TYPE);
+                        auditRecordKeyValues.putAll(eventData);
+                    }
+
 					int indexOfData = messageData.indexOf(KMODULE_DATA_KEY);
 					if(indexOfData != -1){
 						String data = messageData.substring(indexOfData + KMODULE_DATA_KEY.length() + 1);
@@ -747,4 +760,28 @@ public class AuditEventReader {
 
 		return auditRecordKeyValues;
 	}
+
+	// Pubali : Parses log message
+    // Assumes the log message will always be between "]" and "exe"
+    private Map<String,String> parseApplogMsg(String messageData) {
+        Map<String, String> keyValPairs = new HashMap<String, String>();
+        if(messageData == null || messageData.trim().isEmpty()){
+            return keyValPairs;
+        }
+        int pidstart = messageData.indexOf(":");
+        int pidend = messageData.indexOf("#");
+        String pid = messageData.substring(pidstart,pidend);
+
+        int sqrbracketidx = messageData.indexOf("]");
+        int exeidx = messageData.indexOf("exe");
+
+        String applog = messageData.substring(sqrbracketidx+1,exeidx);
+
+        // remove leading and trailing non-alpha-numerics
+        applog = applog.replaceAll("^[^a-zA-Z0-9\\s]+|[^a-zA-Z0-9\\s]+$", "");
+
+        keyValPairs.put("pid",pid);
+        keyValPairs.put("log",applog);
+        return keyValPairs;
+    }
 }

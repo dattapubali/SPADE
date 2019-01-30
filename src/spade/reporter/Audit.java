@@ -73,6 +73,7 @@ import spade.reporter.audit.process.ProcessWithoutAgentManager;
 import spade.utility.CommonFunctions;
 import spade.utility.Execute;
 import spade.utility.FileUtility;
+import spade.vertex.opm.Application;
 import spade.vertex.opm.Artifact;
 import spade.vertex.opm.Process;
 
@@ -1019,14 +1020,14 @@ public class Audit extends AbstractReporter {
 		return null;
 	}
 	
-	private AuditEventReader getAuditEventReader(String spadeAuditBridgeCommand, 
+	private AuditEventReader   getAuditEventReader(String spadeAuditBridgeCommand,
 			InputStream stdoutStream,
 			String outputLogFilePath,
 			Long recordsToRotateOutputLogAfter){
 		
 		try{
 			// Create the audit event reader using the STDOUT of the spadeAuditBridge process
-			AuditEventReader auditEventReader = new AuditEventReader(spadeAuditBridgeCommand, 
+			AuditEventReader auditEventReader = new AuditEventReader(spadeAuditBridgeCommand,
 					stdoutStream, FAIL_FAST);
 			if(outputLogFilePath != null){
 				auditEventReader.setOutputLog(outputLogFilePath, recordsToRotateOutputLogAfter);
@@ -1717,15 +1718,40 @@ public class Audit extends AbstractReporter {
 				if(HANDLE_KM_RECORDS){
 					handleKernelModuleEvent(eventData);
 				}
-			}else{
+			}
+			else if (AuditEventReader.APPLOG_RECORD_TYPE.equals(recordType)){ // Pubali: add vertex
+			    handleApplicationLog(eventData);
+            }
+			else{
 				handleSyscallEvent(eventData);
 			}
 		}catch(Exception e){
 			logger.log(Level.WARNING, "Failed to process eventData: " + eventData, e);
 		}
 	}
-	
-	private void handleKernelModuleEvent(Map<String, String> eventData){
+
+	// Pubali: This method only adds application log vertex to the graph
+    // The edge to the proper pid is added later on in storage/graphviz
+    private void handleApplicationLog(Map<String, String> eventData) {
+        String eventId = eventData.get(AuditEventReader.EVENT_ID);
+        String time = eventData.get(AuditEventReader.TIME);
+        String pid = null;
+        try {
+            pid = eventData.get(AuditEventReader.PID);
+            Map<String, String> vertexAnnotations = new HashMap<>();
+            vertexAnnotations.put("event_id",eventId);
+            vertexAnnotations.put("time",time);
+            vertexAnnotations.put("pid",pid);
+            vertexAnnotations.put("log",eventData.get("log"));
+            Application app = new Application();
+            app.addAnnotations(vertexAnnotations);
+            putVertex(app);
+        }catch(Exception e){
+            log(Level.WARNING, "Failed to parse application log event", null, time, eventId, null);
+        }
+    }
+
+    private void handleKernelModuleEvent(Map<String, String> eventData){
 		String eventId = eventData.get(AuditEventReader.EVENT_ID);
 		String time = eventData.get(AuditEventReader.TIME);
 		SYSCALL syscall = null;
