@@ -251,6 +251,18 @@ public class Graph extends AbstractStorage implements Serializable
         return true;
     }
 
+    public boolean removeEdge(AbstractEdge edge){
+        if (!reverseEdgeIdentifiers.containsKey(edge))
+        {
+            return false;
+        }
+        String hashCode = edge.getChildVertex().bigHashCode() + edge.getParentVertex().bigHashCode();
+        edgeIdentifiers.remove(hashCode, edge);
+        reverseEdgeIdentifiers.remove(edge, hashCode);
+        edgeSet.remove(edge);
+        return true;
+    }
+
     public void commitIndex() {
         try {
             vertexIndexWriter.commit();
@@ -642,6 +654,10 @@ public class Graph extends AbstractStorage implements Serializable
             {
                 shape = "box";
                 color = "lightsteelblue1";
+            }
+            else if (type.equalsIgnoreCase("Application")){
+                shape = "parallelogram";
+                color = "brown1";
             }
             else if (type.equalsIgnoreCase("Artifact") || type.equalsIgnoreCase("Entity"))
             {

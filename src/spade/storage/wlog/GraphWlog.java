@@ -4,6 +4,7 @@ import org.apache.commons.codec.binary.Hex;
 import spade.core.*;
 import spade.edge.cdm.SimpleEdge;
 
+import javax.xml.soap.Node;
 import java.util.*;
 
 public class GraphWlog {
@@ -12,6 +13,7 @@ public class GraphWlog {
     private final static String lineageGraphString = "lineage.dot";
     private final static String prunedGraphString = "pruned.dot";
     private final static String appGraftString = "appGrafted.dot";
+    private final static String partitionedGraph = "partitionGraph.dot";
     private final static int maxdepth = 10;
     private static Graph spadeGraph = null;
     private static Map<String,String> pidVertexMap = null;
@@ -38,25 +40,26 @@ public class GraphWlog {
         return unionGraph;
     }
 
-    public static void generateLineageDot(String procname){
+    public static Graph generateLineageGraph(String procname){
         if(spadeGraph==null) {
             System.err.println("Spade Graph is not imported");
-            return;
+            return null;
         }
 
         Graph lineageGraph = getProcessLineage(procname);
-        lineageGraph.exportGraph(dirpath + lineageGraphString);
+        return lineageGraph;
+        //lineageGraph.exportGraph(dirpath + lineageGraphString);
     }
 
-    public static void generatePrunedDot(String procname){
+    public static Graph generatePrunedGraph(String procname){
         if(spadeGraph==null) {
             System.err.println("Spade Graph is not imported");
-            return;
+            return null;
         }
         Graph lineageGraph = getProcessLineage(procname);
         Graph pruned = Graph.remove(spadeGraph,lineageGraph);
-        pruned.exportGraph(dirpath + prunedGraphString);
-
+        //pruned.exportGraph(dirpath + prunedGraphString);
+        return pruned;
     }
 
     public static Graph getDepGraph(AbstractVertex root){
@@ -69,37 +72,52 @@ public class GraphWlog {
 
     public static void graftApplicationNodes(){
         if(pidVertexMap == null){
-            scanPidNodes();
+            pidVertexMap = scanPidNodes(spadeGraph);
         }
         Set<AbstractVertex> abstractVertices = spadeGraph.vertexSet();
         for(AbstractVertex v : abstractVertices) {
             if (!v.getAnnotation("type").equalsIgnoreCase("Application")) continue;
+
+            //editing the log msg here
+            String msg = v.getAnnotation("log");
+            //v.addAnnotation("log",msg.substring(msg.length()/2));
+
             String relatedProcess = v.getAnnotation("pid");
             AbstractVertex procnode = spadeGraph.getVertex(pidVertexMap.get(relatedProcess));
-            System.out.println(v);
-            System.out.println(procnode);
-            SimpleEdge edge = new SimpleEdge(v,procnode);
-            spadeGraph.putEdge(edge);
+            if(procnode!=null) {
+                SimpleEdge edge = new SimpleEdge(v, procnode);
+                spadeGraph.putEdge(edge);
+            }
         }
-        spadeGraph.exportGraph(dirpath + appGraftString );
+        //spadeGraph.exportGraph(dirpath + appGraftString );
     }
 
-    public static void scanPidNodes(){
-        Set<AbstractVertex> abstractVertices = spadeGraph.vertexSet();
+    public static Map<String,String> scanPidNodes(Graph g){
+        if(g == null) {
+            System.err.println("Graph is not imported.");
+        }
+        Map<String,String> pidmap = new HashMap<>();
+        Set<AbstractVertex> abstractVertices = g.vertexSet();
         for(AbstractVertex v : abstractVertices){
             if (!v.getAnnotation("type").equalsIgnoreCase("Process")) continue;
             String pid = v.getAnnotation("pid");
-            if(pidVertexMap==null){
-                pidVertexMap = new HashMap<>();
-            }
-            pidVertexMap.put(pid,v.bigHashCode());
+            pidmap.put(pid,v.bigHashCode());
         }
+        return pidmap;
+    }
+
+    public static void exportDotGraph(Graph g, String file){
+        g.exportGraph(dirpath + file );
     }
 
     public static void main(String[] args){
         importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
         graftApplicationNodes();
-        //generateLineageDot("ftpbench");
-        //generatePrunedDot("ftpbench");
+        NodeSplitter n = new NodeSplitter(spadeGraph);
+        n.partitionExecution("proftpd","FTP session closed");
+        exportDotGraph(spadeGraph,partitionedGraph);
+        //Graph g1 = generateLineageGraph("ftpbench");
+        //Graph g2 = generatePrunedGraph("ftpbench");
+        //exportDotGraph(g1,lineageGraphString);
     }
 }

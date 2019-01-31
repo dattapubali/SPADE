@@ -1739,7 +1739,7 @@ public class Audit extends AbstractReporter {
         try {
             pid = eventData.get(AuditEventReader.PID);
             Map<String, String> vertexAnnotations = new HashMap<>();
-            vertexAnnotations.put("event_id",eventId);
+            vertexAnnotations.put("appeventid",eventId);
             vertexAnnotations.put("time",time);
             vertexAnnotations.put("pid",pid);
             vertexAnnotations.put("log",eventData.get("log"));

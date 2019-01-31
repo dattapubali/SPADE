@@ -772,10 +772,10 @@ public class AuditEventReader {
         int pidend = messageData.indexOf("#");
         String pid = messageData.substring(pidstart+1,pidend);
 
-        int sqrbracketidx = messageData.indexOf("]");
+        int logstartidx = messageData.indexOf("##");
         int exeidx = messageData.indexOf("exe");
 
-        String applog = messageData.substring(sqrbracketidx+1,exeidx);
+        String applog = messageData.substring(logstartidx+2,exeidx);
 
         // remove leading and trailing non-alpha-numerics
         applog = applog.replaceAll("^[^a-zA-Z0-9\\s]+|[^a-zA-Z0-9\\s]+$", "");
