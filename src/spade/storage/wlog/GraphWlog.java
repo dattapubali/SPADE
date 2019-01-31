@@ -15,15 +15,23 @@ public class GraphWlog {
     private final static String appGraftString = "appGrafted.dot";
     private final static String partitionedGraph = "partitionGraph.dot";
     private final static int maxdepth = 10;
-    private static Graph spadeGraph = null;
-    private static Map<String,String> pidVertexMap = null;
 
+    private Graph spadeGraph = null;
+    private Map<String,String> pidVertexMap = null;
 
-    public static void importModifiedSpadeGraph(String path){
+    public GraphWlog(String dotfilepath){
+        importModifiedSpadeGraph(dotfilepath);
+    }
+
+    public Graph getSpadeGraph(){
+        return spadeGraph;
+    }
+
+    public void importModifiedSpadeGraph(String path){
         spadeGraph = Graph.importGraph(path);
     }
 
-    public static Graph getProcessLineage (String procname) {
+    public Graph getProcessLineage (String procname) {
 
         Graph unionGraph = new Graph();
 
@@ -40,7 +48,7 @@ public class GraphWlog {
         return unionGraph;
     }
 
-    public static Graph generateLineageGraph(String procname){
+    public Graph generateLineageGraph(String procname){
         if(spadeGraph==null) {
             System.err.println("Spade Graph is not imported");
             return null;
@@ -51,7 +59,7 @@ public class GraphWlog {
         //lineageGraph.exportGraph(dirpath + lineageGraphString);
     }
 
-    public static Graph generatePrunedGraph(String procname){
+    public Graph generatePrunedGraph(String procname){
         if(spadeGraph==null) {
             System.err.println("Spade Graph is not imported");
             return null;
@@ -62,7 +70,7 @@ public class GraphWlog {
         return pruned;
     }
 
-    public static Graph getDepGraph(AbstractVertex root){
+    public Graph getDepGraph(AbstractVertex root){
         String hash = root.bigHashCode();
         Graph lineageBackward = spadeGraph.getLineage(hash,AbstractStorage.DIRECTION_ANCESTORS,maxdepth);
         Graph lineageForward = spadeGraph.getLineage(hash,AbstractStorage.DIRECTION_DESCENDANTS,maxdepth);
@@ -70,7 +78,7 @@ public class GraphWlog {
         return Graph.union(lineageBackward, lineageForward);
     }
 
-    public static void graftApplicationNodes(){
+    public void graftApplicationNodes(){
         if(pidVertexMap == null){
             pidVertexMap = scanPidNodes(spadeGraph);
         }
@@ -111,11 +119,13 @@ public class GraphWlog {
     }
 
     public static void main(String[] args){
-        importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
-        graftApplicationNodes();
-        NodeSplitter n = new NodeSplitter(spadeGraph);
+        GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
+        //importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
+        wlog.graftApplicationNodes();
+        NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
         n.partitionExecution("proftpd","FTP session closed");
-        exportDotGraph(spadeGraph,partitionedGraph);
+
+        exportDotGraph(n.getGraph(),partitionedGraph);
         //Graph g1 = generateLineageGraph("ftpbench");
         //Graph g2 = generatePrunedGraph("ftpbench");
         //exportDotGraph(g1,lineageGraphString);
