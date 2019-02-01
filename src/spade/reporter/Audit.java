@@ -1394,7 +1394,8 @@ public class Audit extends AbstractReporter {
 
 				// Added by Pubali
                 StringBuffer trackPidFields = new StringBuffer();
-                trackPids.forEach(trackPid -> {trackPidFields.append("-F pid=").append(trackPid).append(" ");});
+                if(trackPids!=null)
+                    trackPids.forEach(trackPid -> {trackPidFields.append("-F pid=").append(trackPid).append(" ");});
 				
 				StringBuffer ppidFields = new StringBuffer();
 				ignorePpids.forEach(ignorePpid -> {ppidFields.append("-F ppid!=").append(ignorePpid).append(" ");});
@@ -1863,8 +1864,8 @@ public class Audit extends AbstractReporter {
 	 * IMPORTANT: Converts all 4 arguments, a0 o a3 to decimal integers from hexadecimal integers and puts them back in the key value map
 	 * 
 	 * Calls the appropriate system call handler based on the system call
-	 * 
-	 * @param eventId id of the event against which the key value maps are saved
+	 *
+	 * @param eventData id of the event against which the key value maps are saved
 	 */
 	private void handleSyscallEvent(Map<String, String> eventData) {
 		String time = eventData.get(AuditEventReader.TIME);
