@@ -200,14 +200,13 @@ public class Graphviz extends AbstractStorage
             for (Map.Entry<String, String> currentEntry : incomingEdge.getAnnotations().entrySet()) {
                 String key = currentEntry.getKey();
                 String value = currentEntry.getValue();
-                if (key == null || value == null
-                        || !key.equals("type") || !key.equals(AuditEventReader.EVENT_ID)) {
-                    continue;
+                if (key == null || value == null) continue;
+                if (key.equals("type") || key.equals(AuditEventReader.EVENT_ID)) {
+                    annotationString.append(key);
+                    annotationString.append(":");
+                    annotationString.append(value);
+                    annotationString.append("\\n");
                 }
-                annotationString.append(key);
-                annotationString.append(":");
-                annotationString.append(value);
-                annotationString.append("\\n");
             }
             String color = "black";
             //String type = incomingEdge.getAnnotation("type");
