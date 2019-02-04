@@ -29,6 +29,7 @@ import org.apache.commons.codec.binary.Hex;
 import spade.core.AbstractEdge;
 import spade.core.AbstractStorage;
 import spade.core.AbstractVertex;
+import spade.reporter.audit.AuditEventReader;
 import spade.reporter.audit.OPMConstants;
 
 /**
@@ -98,7 +99,7 @@ public class Graphviz extends AbstractStorage
                 }
                 if ((key.equals("name") || key.equals("pid") || key.equals("path") || key.equals("local address")
                         || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))
-                        || key.equals("log") || key.equals("appeventid")) {
+                        || key.equals("log") || key.equals(AuditEventReader.EVENT_ID)) {
                     annotationString.append(key);
                     annotationString.append(":");
                     annotationString.append(value);

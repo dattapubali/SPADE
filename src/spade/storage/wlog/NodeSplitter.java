@@ -4,6 +4,7 @@ import spade.core.AbstractEdge;
 import spade.core.AbstractVertex;
 import spade.core.Graph;
 import spade.edge.cdm.SimpleEdge;
+import spade.reporter.audit.AuditEventReader;
 import spade.vertex.opm.Process;
 
 import java.util.Arrays;
@@ -58,7 +59,7 @@ public class NodeSplitter {
 
         AbstractVertex[] vertexArr = buildVertexArray(vertices);
         //printArray(vertexArr);
-        Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation("appeventid"))));
+        Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
         printArray(vertexArr);
 
         for(int i =0 ; i < vertexArr.length; i++){
