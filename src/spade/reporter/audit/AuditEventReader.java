@@ -649,14 +649,14 @@ public class AuditEventReader {
 				if(type.equals(RECORD_TYPE_USER)){
 
 				    // Pubali : change code to handle injected logs by wajih
-                    int indexofApplog = messageData.indexOf(APPLOG_DATA_KEY);
+                    /*int indexofApplog = messageData.indexOf(APPLOG_DATA_KEY);
                     if(indexofApplog != -1){
                         String data = messageData.substring(indexofApplog + APPLOG_DATA_KEY.length() + 1);
                         data = data.substring(1, data.length() - 1);// remove quotes
                         Map<String, String> eventData = parseApplogMsg(data);
                         eventData.put(RECORD_TYPE_KEY, APPLOG_RECORD_TYPE);
                         auditRecordKeyValues.putAll(eventData);
-                    }
+                    }*/
 
 					int indexOfData = messageData.indexOf(KMODULE_DATA_KEY);
 					if(indexOfData != -1){

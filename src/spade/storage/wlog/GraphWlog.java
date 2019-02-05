@@ -123,8 +123,9 @@ public class GraphWlog {
         return pidmap;
     }
 
-    public static void exportDotGraph(Graph g, String file, String logKeyword){
-        shortenLogMessages(g, logKeyword);
+    public static void exportDotGraph(Graph g, String file, String logKeyword, boolean shortenLog){
+        if(shortenLog)
+            shortenLogMessages(g, logKeyword);
         g.exportGraph(dirpath + file );
     }
 
@@ -145,18 +146,18 @@ public class GraphWlog {
     }
 
     public static void main(String[] args){
-        runPartitioning("GET","nginx","nginx.dot");
-        runPartitioning("FTP session closed", "proftpd","proftpd.dot");
+        runPartitioning("GET ","nginx","nginx.dot",true);
+        runPartitioning("FTP session closed", "proftpd","proftpd.dot",false);
 
         //Graph g2 = generatePrunedGraph("ftpbench");
     }
 
-    private static void runPartitioning(String logKeyword, String process, String dotfile) {
+    private static void runPartitioning(String logKeyword, String process, String dotfile, boolean shortenLog) {
         GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/graphdots/" + dotfile);
         wlog.graftApplicationNodes();
         NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
         n.partitionExecution(process,logKeyword);
         Graph g1 = wlog.generateLineageGraph(process);
-        exportDotGraph(g1,process+lineageGraphString, logKeyword);
+        exportDotGraph(g1,process+lineageGraphString, logKeyword, shortenLog);
     }
 }

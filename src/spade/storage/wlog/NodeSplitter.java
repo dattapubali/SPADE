@@ -51,11 +51,6 @@ public class NodeSplitter {
         // get children of the process (application logs are grafted as child nodes)
         Graph childSubgraph = g.getChildren(processhash);
 
-        // sort the edges based on event id
-        //incidentEdges.addAll(childSubgraph.edgeSet());
-        //incidentEdges.sort(Comparator.comparing(a -> Long.valueOf(a.getAnnotation(OPMConstants.EDGE_EVENT_ID))));
-
-
         // The application logs are in the child subgraph
         Set<AbstractVertex> vertices = childSubgraph.vertexSet();
 
@@ -83,26 +78,21 @@ public class NodeSplitter {
             // if the log msg is contained in the applog node then split the original procnode
             if(logstring.toLowerCase().contains(logMsg.toLowerCase())){
 
-                System.out.println("Going to split node now");
+                //System.out.println("Going to split node now");
+
+
+                // If splitpoint is at the end of the array handle that
+                if(i==vertexArr.length-1){
+                    if(!splitRequired(splitEventid,processhash,g))
+                        continue;
+                    System.out.println("split true "+splitEventid);
+                }
+
                 AbstractVertex newNode = new Process();
                 newNode.addAnnotations(procnode.getAnnotations());
                 newNode.addAnnotation("name",procnode.getAnnotation("name"));
                 newNode.addAnnotation("compnum", String.valueOf(count++));
                 g.putVertex(newNode);
-
-                // If splitpoint is at the end of the array handle that
-                if(i==vertexArr.length-1){
-                    // check for edges those have event ids greater than applog node
-                    // move those edges to a new mode
-                    /*if(moveExistingEdges(splitEventid,newNode,processhash,g)){
-                        g.putEdge(new SimpleEdge(newNode,procnode));
-                    }else{
-                        g.removeVertex(newNode);
-                    }*/
-                    if(!moveExistingEdges(splitEventid,newNode,processhash,g))
-                        g.removeVertex(newNode);
-                    continue;
-                }
 
                 //create an edge form the original node to this one
                 g.putEdge(new SimpleEdge(newNode,lastNewNode));
@@ -130,6 +120,39 @@ public class NodeSplitter {
                 }*/
             }
         }
+    }
+
+    private boolean splitRequired(String splitEventid, String processhash, Graph g) {
+        boolean require = false;
+
+        long splitEventID = Long.parseLong(splitEventid);
+
+        // Update parent of child edges
+        Set<AbstractEdge> childEdges = g.getChildren(processhash).edgeSet();
+        for(AbstractEdge e : childEdges){
+            String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            if(id == null || id.isEmpty())
+                continue;
+
+            long idval = Long.parseLong(id);
+            if(idval > splitEventID){
+                require = true;
+            }
+        }
+
+        // Update child of parent edges
+        Set<AbstractEdge> parentEdges = g.getParents(processhash).edgeSet();
+        for(AbstractEdge e : parentEdges){
+            String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            if(id == null || id.isEmpty())
+                continue;
+
+            long idval = Long.parseLong(id);
+            if(idval > splitEventID){
+                require = true;
+            }
+        }
+        return require;
     }
 
     private void printEdges(AbstractVertex newNode, long splitEventid, boolean b) {
