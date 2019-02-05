@@ -3,7 +3,6 @@ package spade.storage.wlog;
 import spade.core.AbstractEdge;
 import spade.core.AbstractVertex;
 import spade.core.Graph;
-import spade.core.Vertex;
 import spade.edge.cdm.SimpleEdge;
 import spade.reporter.audit.AuditEventReader;
 import spade.reporter.audit.OPMConstants;
@@ -36,8 +35,8 @@ public class NodeSplitter {
             AbstractVertex processNode = g.getVertex(vertexhash);
 
             if(processNode.getAnnotation("name").equalsIgnoreCase(process)){
-                System.out.println("Found vertex with procname "+processNode.getAnnotation("name")+" "
-                        +processNode.getAnnotation("pid"));
+                //System.out.println("Found vertex with procname "+processNode.getAnnotation("name")+" "
+                 //       +processNode.getAnnotation("pid"));
                 splitNode(processNode,entry.getValue(), logMsg);
             }
         }
@@ -47,7 +46,7 @@ public class NodeSplitter {
     private void splitNode(AbstractVertex procnode, String processhash, String logMsg) {
 
         int count = 1;
-        int lastsplitIdx = 0;
+        AbstractVertex lastNewNode = procnode;
 
         // get children of the process (application logs are grafted as child nodes)
         Graph childSubgraph = g.getChildren(processhash);
@@ -87,7 +86,8 @@ public class NodeSplitter {
                 System.out.println("Going to split node now");
                 AbstractVertex newNode = new Process();
                 newNode.addAnnotations(procnode.getAnnotations());
-                newNode.addAnnotation("name",procnode.getAnnotation("name")+(count++));
+                newNode.addAnnotation("name",procnode.getAnnotation("name"));
+                newNode.addAnnotation("compnum", String.valueOf(count++));
                 g.putVertex(newNode);
 
                 // If splitpoint is at the end of the array handle that
@@ -105,20 +105,59 @@ public class NodeSplitter {
                 }
 
                 //create an edge form the original node to this one
-                //g.putEdge(new SimpleEdge(newNode,procnode));
+                g.putEdge(new SimpleEdge(newNode,lastNewNode));
 
                 //remove applog edges till splitpoint from original node, add them to new node
-                for(int j=lastsplitIdx;j<=i;j++){
+                // NOT REQUIRED: moveExistingEdges will do it
+                /*for(int j=lastsplitIdx;j<=i;j++){
                     AbstractEdge edge = childSubgraph.getEdge(vertexArr[j].bigHashCode(),procnode.bigHashCode());
                     g.removeEdge(edge);
                     g.putEdge(new SimpleEdge(vertexArr[j],newNode));
-                }
+                }*/
 
                 // move existing edges till splitpoint to the new node
-                moveExistingEdges(splitEventid,newNode,processhash,g);
+                boolean update = moveExistingEdges(splitEventid,newNode,processhash,g);
+                lastNewNode = newNode;
 
                 // update last split index
-                lastsplitIdx = i;
+                //lastsplitIdx = i;
+                /*if(update) {
+                    System.out.println("Split event id: "+splitEventid);
+                    long id = Long.parseLong(splitEventid);
+                    printEdges(newNode, id, false);
+                    printEdges(procnode, id, true);
+                    //break;
+                }*/
+            }
+        }
+    }
+
+    private void printEdges(AbstractVertex newNode, long splitEventid, boolean b) {
+        System.out.println("printing data for "+newNode);
+        Graph subgraph = g.getChildren(newNode.bigHashCode());
+
+        for(AbstractEdge e : subgraph.edgeSet()){
+            long val = Long.parseLong(e.getChildVertex().getAnnotation("eventid"));
+            if(b) {
+                if(val <= splitEventid)
+                    System.out.println("Wrong "+val);
+            }
+            else{
+                if(val > splitEventid)
+                    System.out.println("Wrong "+val);
+            }
+        }
+
+        Graph subgraph1 = g.getParents(newNode.bigHashCode());
+        for(AbstractEdge e : subgraph1.edgeSet()){
+            long val = Long.parseLong(e.getAnnotation(OPMConstants.EDGE_EVENT_ID));
+            if(b) {
+                if(val < splitEventid)
+                    System.out.println("Wrong "+val);
+            }
+            else{
+                if(val >= splitEventid)
+                    System.out.println("Wrong "+val);
             }
         }
     }
@@ -137,7 +176,7 @@ public class NodeSplitter {
                 continue;
 
             long idval = Long.parseLong(id);
-            if(idval < splitEventID){
+            if(idval <= splitEventID){
                 e.setParentVertex(newNode);
                 changed = true;
             }
@@ -151,7 +190,7 @@ public class NodeSplitter {
                 continue;
 
             long idval = Long.parseLong(id);
-            if(idval < splitEventID){
+            if(idval <= splitEventID){
                 e.setChildVertex(newNode);
                 changed = true;
             }

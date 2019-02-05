@@ -685,7 +685,7 @@ public class Graph extends AbstractStorage implements Serializable
                 color = "lightsteelblue1";
             }
             else if (type.equalsIgnoreCase("Application")){
-                shape = "parallelogram";
+                shape = "hexagon";
                 color = "brown1";
             }
             else if (type.equalsIgnoreCase("Artifact") || type.equalsIgnoreCase("Entity"))

@@ -3,6 +3,8 @@ package spade.storage.wlog;
 import org.apache.commons.codec.binary.Hex;
 import spade.core.*;
 import spade.edge.cdm.SimpleEdge;
+import spade.reporter.audit.AuditEventReader;
+import spade.reporter.audit.OPMConstants;
 
 import javax.xml.soap.Node;
 import java.util.*;
@@ -91,12 +93,13 @@ public class GraphWlog {
             String type = v.getAnnotation("type");
             if(type == null || type.isEmpty())
                 continue;
-            if (type.equalsIgnoreCase("Application")) continue;
+            if (!type.equalsIgnoreCase("Application")) continue;
 
             String relatedProcess = v.getAnnotation("pid");
             AbstractVertex procnode = spadeGraph.getVertex(pidVertexMap.get(relatedProcess));
             if(procnode!=null) {
                 SimpleEdge edge = new SimpleEdge(v, procnode);
+                edge.addAnnotation(OPMConstants.EDGE_EVENT_ID,v.getAnnotation(AuditEventReader.EVENT_ID));
                 spadeGraph.putEdge(edge);
             }
         }
@@ -142,20 +145,18 @@ public class GraphWlog {
     }
 
     public static void main(String[] args){
-        GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/graphdots/nginx.dot");
-        //importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
-        wlog.graftApplicationNodes();
-        NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
-
-        String logKeyword = "GET";
-        //n.partitionExecution("proftpd","FTP session closed");
-        n.partitionExecution("nginx",logKeyword);
-        Graph g1 = wlog.generateLineageGraph("nginx");
-
-        //exportDotGraph(n.getGraph(),"nginx"+partitionedGraph);
-        exportDotGraph(g1,"nginx"+lineageGraphString, logKeyword);
+        runPartitioning("GET","nginx","nginx.dot");
+        runPartitioning("FTP session closed", "proftpd","proftpd.dot");
 
         //Graph g2 = generatePrunedGraph("ftpbench");
-        //exportDotGraph(g1,lineageGraphString);
+    }
+
+    private static void runPartitioning(String logKeyword, String process, String dotfile) {
+        GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/graphdots/" + dotfile);
+        wlog.graftApplicationNodes();
+        NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
+        n.partitionExecution(process,logKeyword);
+        Graph g1 = wlog.generateLineageGraph(process);
+        exportDotGraph(g1,process+lineageGraphString, logKeyword);
     }
 }
