@@ -260,6 +260,19 @@ public class Graph extends AbstractStorage implements Serializable
         edgeIdentifiers.remove(hashCode, edge);
         reverseEdgeIdentifiers.remove(edge, hashCode);
         edgeSet.remove(edge);
+        serial_number--;
+        return true;
+    }
+
+    public boolean removeVertex(AbstractVertex vertex) {
+        if (!reverseVertexIdentifiers.containsKey(vertex)) {
+            return false;
+        }
+        String hashCode = vertex.bigHashCode();
+        vertexIdentifiers.remove(hashCode, vertex);
+        reverseVertexIdentifiers.remove(vertex, hashCode);
+        vertexSet.remove(vertex);
+        serial_number--;
         return true;
     }
 

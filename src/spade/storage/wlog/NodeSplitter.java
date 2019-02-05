@@ -5,12 +5,10 @@ import spade.core.AbstractVertex;
 import spade.core.Graph;
 import spade.edge.cdm.SimpleEdge;
 import spade.reporter.audit.AuditEventReader;
+import spade.reporter.audit.OPMConstants;
 import spade.vertex.opm.Process;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class NodeSplitter {
 
@@ -49,49 +47,112 @@ public class NodeSplitter {
 
         int count = 1;
         int lastsplitIdx = 0;
-        Graph childSubgraph = g.getChildren(processhash);
-        Set<AbstractVertex> vertices = childSubgraph.vertexSet();
 
-        System.out.println(vertices);
+        // get children of the process (application logs are grafted as child nodes)
+        Graph childSubgraph = g.getChildren(processhash);
+
+        // sort the edges based on event id
+        //incidentEdges.addAll(childSubgraph.edgeSet());
+        //incidentEdges.sort(Comparator.comparing(a -> Long.valueOf(a.getAnnotation(OPMConstants.EDGE_EVENT_ID))));
+
+
+        // The application logs are in the child subgraph
+        Set<AbstractVertex> vertices = childSubgraph.vertexSet();
 
         // remove the process node itself
         vertices.remove(procnode);
 
+        // remove nodes that are not application logs
+        for(AbstractVertex v: vertices){
+            if(!v.getAnnotation("type").equalsIgnoreCase("Application"))
+                vertices.remove(v);
+        }
+
+
         AbstractVertex[] vertexArr = buildVertexArray(vertices);
-        //printArray(vertexArr);
         Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
-        printArray(vertexArr);
 
         for(int i =0 ; i < vertexArr.length; i++){
             AbstractVertex v = vertexArr[i];
 
             String logstring = v.getAnnotation("log");
+            String splitEventid = v.getAnnotation(AuditEventReader.EVENT_ID);
 
             // if the log msg is contained in the applog node then split the original procnode
             if(logstring.toLowerCase().contains(logMsg.toLowerCase())){
-                if(i==vertexArr.length-1)
-                    continue;
-                // split node here
+
                 System.out.println("Going to split node now");
                 AbstractVertex newNode = new Process();
                 newNode.addAnnotations(procnode.getAnnotations());
                 newNode.addAnnotation("name",procnode.getAnnotation("name")+(count++));
                 g.putVertex(newNode);
 
+                // If splitpoint is at the end of the array handle that
+                if(i==vertexArr.length-1){
+                    // check for edges those have event ids greater than applog node
+                    // move those edges to a new mode
+                    if(moveExistingEdges(splitEventid,newNode,processhash,g)){
+                        g.putEdge(new SimpleEdge(newNode,procnode));
+                    }else{
+                        g.removeVertex(newNode);
+                    }
+                    continue;
+                }
+
                 //create an edge form the original node to this one
                 g.putEdge(new SimpleEdge(newNode,procnode));
 
-                //remove edges till splitpoint from original node, add them to new node
+                //remove applog edges till splitpoint from original node, add them to new node
                 for(int j=lastsplitIdx;j<=i;j++){
                     AbstractEdge edge = childSubgraph.getEdge(vertexArr[j].bigHashCode(),procnode.bigHashCode());
                     g.removeEdge(edge);
                     g.putEdge(new SimpleEdge(vertexArr[j],newNode));
                 }
 
+                // move existing edges till splitpoint to the new node
+                moveExistingEdges(splitEventid,newNode,processhash,g);
+
                 // update last split index
                 lastsplitIdx = i;
             }
         }
+    }
+
+    private boolean moveExistingEdges(String annotation, AbstractVertex newNode, String processhash, Graph g) {
+
+        boolean changed = false;
+
+        long splitEventID = Long.parseLong(annotation);
+
+        // Update parent of child edges
+        Set<AbstractEdge> childEdges = g.getChildren(processhash).edgeSet();
+        for(AbstractEdge e : childEdges){
+            String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            if(id == null || id.isEmpty())
+                continue;
+
+            long idval = Long.parseLong(id);
+            if(idval < splitEventID){
+                e.setParentVertex(newNode);
+                changed = true;
+            }
+        }
+
+        // Update child of parent edges
+        Set<AbstractEdge> parentEdges = g.getParents(processhash).edgeSet();
+        for(AbstractEdge e : parentEdges){
+            String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            if(id == null || id.isEmpty())
+                continue;
+
+            long idval = Long.parseLong(id);
+            if(idval < splitEventID){
+                e.setChildVertex(newNode);
+                changed = true;
+            }
+        }
+        return changed;
+
     }
 
     private AbstractVertex[] buildVertexArray(Set<AbstractVertex> vertices) {
