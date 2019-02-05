@@ -3,6 +3,7 @@ package spade.storage.wlog;
 import spade.core.AbstractEdge;
 import spade.core.AbstractVertex;
 import spade.core.Graph;
+import spade.core.Vertex;
 import spade.edge.cdm.SimpleEdge;
 import spade.reporter.audit.AuditEventReader;
 import spade.reporter.audit.OPMConstants;
@@ -63,9 +64,11 @@ public class NodeSplitter {
         vertices.remove(procnode);
 
         // remove nodes that are not application logs
-        for(AbstractVertex v: vertices){
+        Iterator<AbstractVertex> itr = vertices.iterator();
+        while(itr.hasNext()){
+            AbstractVertex v = itr.next();
             if(!v.getAnnotation("type").equalsIgnoreCase("Application"))
-                vertices.remove(v);
+                itr.remove();
         }
 
 
@@ -91,16 +94,18 @@ public class NodeSplitter {
                 if(i==vertexArr.length-1){
                     // check for edges those have event ids greater than applog node
                     // move those edges to a new mode
-                    if(moveExistingEdges(splitEventid,newNode,processhash,g)){
+                    /*if(moveExistingEdges(splitEventid,newNode,processhash,g)){
                         g.putEdge(new SimpleEdge(newNode,procnode));
                     }else{
                         g.removeVertex(newNode);
-                    }
+                    }*/
+                    if(!moveExistingEdges(splitEventid,newNode,processhash,g))
+                        g.removeVertex(newNode);
                     continue;
                 }
 
                 //create an edge form the original node to this one
-                g.putEdge(new SimpleEdge(newNode,procnode));
+                //g.putEdge(new SimpleEdge(newNode,procnode));
 
                 //remove applog edges till splitpoint from original node, add them to new node
                 for(int j=lastsplitIdx;j<=i;j++){

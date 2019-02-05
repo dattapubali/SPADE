@@ -276,6 +276,22 @@ public class Graph extends AbstractStorage implements Serializable
         return true;
     }
 
+    public boolean addAnnotationToVertex(AbstractVertex vertex,String key, String val) {
+        if (!reverseVertexIdentifiers.containsKey(vertex)) {
+            return false;
+        }
+        String oldhash = reverseEdgeIdentifiers.get(vertex);
+
+        vertex.addAnnotation(key,val);
+        String newhash = vertex.bigHashCode();
+
+        vertexIdentifiers.remove(oldhash, vertex);
+        vertexIdentifiers.put(newhash, vertex);
+
+        reverseVertexIdentifiers.put(vertex, newhash);
+        return true;
+    }
+
     public void commitIndex() {
         try {
             vertexIndexWriter.commit();
@@ -529,7 +545,7 @@ public class Graph extends AbstractStorage implements Serializable
                     vertex = new Artifact();
                 } else if (shape.equals("octagon")) {
                     vertex = new Agent();
-                } else if (shape.equals("parallelogram")){
+                } else if (shape.equals("hexagon")){
                     vertex = new Application();
                 }
                 else {

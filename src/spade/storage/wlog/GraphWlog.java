@@ -15,6 +15,7 @@ public class GraphWlog {
     private final static String appGraftString = "appGrafted.dot";
     private final static String partitionedGraph = "partitionGraph.dot";
     private final static int maxdepth = 10;
+    private final static int loglength = 20;
 
     private Graph spadeGraph = null;
     private Map<String,String> pidVertexMap = null;
@@ -38,7 +39,10 @@ public class GraphWlog {
         Set<AbstractVertex> abstractVertices = spadeGraph.vertexSet();
 
         for (AbstractVertex v : abstractVertices) {
-            if (!v.getAnnotation("type").equalsIgnoreCase("Process")) continue;
+            String type = v.getAnnotation("type");
+            if(type == null || type.isEmpty())
+                continue;
+            if (!type.equalsIgnoreCase("Process")) continue;
             if ((v.getAnnotation("name")).equals(procname)) {
                 Graph depGraph = getDepGraph(v);
                 unionGraph = Graph.union(unionGraph, depGraph);
@@ -84,11 +88,10 @@ public class GraphWlog {
         }
         Set<AbstractVertex> abstractVertices = spadeGraph.vertexSet();
         for(AbstractVertex v : abstractVertices) {
-            if (!v.getAnnotation("type").equalsIgnoreCase("Application")) continue;
-
-            //editing the log msg here
-            String msg = v.getAnnotation("log");
-            //v.addAnnotation("log",msg.substring(msg.length()/2));
+            String type = v.getAnnotation("type");
+            if(type == null || type.isEmpty())
+                continue;
+            if (type.equalsIgnoreCase("Application")) continue;
 
             String relatedProcess = v.getAnnotation("pid");
             AbstractVertex procnode = spadeGraph.getVertex(pidVertexMap.get(relatedProcess));
@@ -107,26 +110,51 @@ public class GraphWlog {
         Map<String,String> pidmap = new HashMap<>();
         Set<AbstractVertex> abstractVertices = g.vertexSet();
         for(AbstractVertex v : abstractVertices){
-            if (!v.getAnnotation("type").equalsIgnoreCase("Process")) continue;
+            String type = v.getAnnotation("type");
+            if(type == null || type.isEmpty())
+                continue;
+            if (!type.equalsIgnoreCase("Process")) continue;
             String pid = v.getAnnotation("pid");
             pidmap.put(pid,v.bigHashCode());
         }
         return pidmap;
     }
 
-    public static void exportDotGraph(Graph g, String file){
+    public static void exportDotGraph(Graph g, String file, String logKeyword){
+        shortenLogMessages(g, logKeyword);
         g.exportGraph(dirpath + file );
     }
 
+    private static void shortenLogMessages(Graph g, String keyword) {
+        Set<AbstractVertex> abstractVertices = g.vertexSet();
+        for(AbstractVertex v : abstractVertices) {
+            if (!v.getAnnotation("type").equalsIgnoreCase("Application")) continue;
+
+            //editing the log msg here
+            String msg = v.getAnnotation("log");
+            int startindex = msg.indexOf(keyword);
+            if(startindex <0) startindex = 0;
+
+            int endindex = msg.length() > startindex+loglength? startindex+loglength : msg.length();
+
+            g.addAnnotationToVertex(v, "log", msg.substring(startindex, endindex));
+        }
+    }
+
     public static void main(String[] args){
-        GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
+        GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/graphdots/nginx.dot");
         //importModifiedSpadeGraph("/Users/pubalidatta/UIUC/projects/SPADE/appprov.dot");
         wlog.graftApplicationNodes();
         NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
-        n.partitionExecution("proftpd","FTP session closed");
 
-        exportDotGraph(n.getGraph(),partitionedGraph);
-        //Graph g1 = generateLineageGraph("ftpbench");
+        String logKeyword = "GET";
+        //n.partitionExecution("proftpd","FTP session closed");
+        n.partitionExecution("nginx",logKeyword);
+        Graph g1 = wlog.generateLineageGraph("nginx");
+
+        //exportDotGraph(n.getGraph(),"nginx"+partitionedGraph);
+        exportDotGraph(g1,"nginx"+lineageGraphString, logKeyword);
+
         //Graph g2 = generatePrunedGraph("ftpbench");
         //exportDotGraph(g1,lineageGraphString);
     }

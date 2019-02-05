@@ -135,7 +135,7 @@ public class Graphviz extends AbstractStorage
                 color = "lightsteelblue1";
             }
             else if (type.equalsIgnoreCase("Application")){
-                shape = "parallelogram";
+                shape = "hexagon";
                 color = "brown1";
             }
             else if (type.equalsIgnoreCase("Artifact")
