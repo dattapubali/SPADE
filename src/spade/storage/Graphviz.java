@@ -97,7 +97,7 @@ public class Graphviz extends AbstractStorage
                 if (key == null || value == null) {
                     continue;
                 }
-                if ((key.equals("name") || key.equals("pid") || key.equals("path") || key.equals("local address")
+                if ((key.equals("name") || key.equals("pid") || (key.equals("path") && value.startsWith("/proc")) || key.equals("local address")
                         || key.equals("local port") || key.equals("remote address") || key.equals("remote port"))
                         || key.equals("log") || key.equals(AuditEventReader.EVENT_ID)) {
                     annotationString.append(key);
