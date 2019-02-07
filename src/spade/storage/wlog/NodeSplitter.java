@@ -35,8 +35,10 @@ public class NodeSplitter {
             AbstractVertex processNode = g.getVertex(vertexhash);
 
             if(processNode.getAnnotation("name").equalsIgnoreCase(process)){
-                //System.out.println("Found vertex with procname "+processNode.getAnnotation("name")+" "
-                 //       +processNode.getAnnotation("pid"));
+                System.out.println("Found vertex with procname "+processNode.getAnnotation("name")+" "
+                        +processNode.getAnnotation("pid"));
+                int numedge = g.getChildren(vertexhash).edgeSet().size() + g.getParents(vertexhash).edgeSet().size();
+                System.out.println("number of edges "+ numedge);
                 splitNode(processNode,entry.getValue(), logMsg);
             }
         }
@@ -68,6 +70,7 @@ public class NodeSplitter {
 
         AbstractVertex[] vertexArr = buildVertexArray(vertices);
         Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
+        printArray(vertexArr);
 
         for(int i =0 ; i < vertexArr.length; i++){
             AbstractVertex v = vertexArr[i];
@@ -78,7 +81,7 @@ public class NodeSplitter {
             // if the log msg is contained in the applog node then split the original procnode
             if(logstring.toLowerCase().contains(logMsg.toLowerCase())){
 
-                //System.out.println("Going to split node now");
+                System.out.println("Going to split node now");
 
 
                 // If splitpoint is at the end of the array handle that
@@ -122,10 +125,10 @@ public class NodeSplitter {
         }
     }
 
-    private boolean splitRequired(String splitEventid, String processhash, Graph g) {
+    private boolean splitRequired(String splitid, String processhash, Graph g) {
         boolean require = false;
 
-        long splitEventID = Long.parseLong(splitEventid);
+        long splitEventID = Long.parseLong(splitid);
 
         // Update parent of child edges
         Set<AbstractEdge> childEdges = g.getChildren(processhash).edgeSet();
@@ -189,18 +192,21 @@ public class NodeSplitter {
 
         boolean changed = false;
 
+        System.out.println("Splitting at "+annotation);
         long splitEventID = Long.parseLong(annotation);
 
         // Update parent of child edges
         Set<AbstractEdge> childEdges = g.getChildren(processhash).edgeSet();
         for(AbstractEdge e : childEdges){
             String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            //System.out.println("Found edge "+id);
             if(id == null || id.isEmpty())
                 continue;
 
             long idval = Long.parseLong(id);
             if(idval <= splitEventID){
-                e.setParentVertex(newNode);
+                System.out.println("Moving edge "+id);
+                g.updateParent(e,newNode);
                 changed = true;
             }
         }
@@ -209,12 +215,14 @@ public class NodeSplitter {
         Set<AbstractEdge> parentEdges = g.getParents(processhash).edgeSet();
         for(AbstractEdge e : parentEdges){
             String id = e.getAnnotation(OPMConstants.EDGE_EVENT_ID);
+            //System.out.println("Found edge "+id);
             if(id == null || id.isEmpty())
                 continue;
 
             long idval = Long.parseLong(id);
             if(idval <= splitEventID){
-                e.setChildVertex(newNode);
+                System.out.println("Moving edge "+id);
+                g.updateChild(e,newNode);
                 changed = true;
             }
         }

@@ -85,6 +85,7 @@ public class GraphWlog {
     }
 
     public void graftApplicationNodes(){
+        int app = 0;
         if(pidVertexMap == null){
             pidVertexMap = scanPidNodes(spadeGraph);
         }
@@ -95,14 +96,17 @@ public class GraphWlog {
                 continue;
             if (!type.equalsIgnoreCase("Application")) continue;
 
+            app++;
             String relatedProcess = v.getAnnotation("pid");
             AbstractVertex procnode = spadeGraph.getVertex(pidVertexMap.get(relatedProcess));
+            //System.out.println(procnode);
             if(procnode!=null) {
                 SimpleEdge edge = new SimpleEdge(v, procnode);
                 edge.addAnnotation(OPMConstants.EDGE_EVENT_ID,v.getAnnotation(AuditEventReader.EVENT_ID));
                 spadeGraph.putEdge(edge);
             }
         }
+        System.out.println("Number of application nodes "+app);
         //spadeGraph.exportGraph(dirpath + appGraftString );
     }
 
@@ -119,6 +123,13 @@ public class GraphWlog {
             if (!type.equalsIgnoreCase("Process")) continue;
             String pid = v.getAnnotation("pid");
             pidmap.put(pid,v.bigHashCode());
+            /*if(v.getAnnotation("name").equals("nginx")) {
+                System.out.println(v.getAnnotation("name"));
+                System.out.println("Existing child edge " + g.getChildren(v.bigHashCode()).edgeSet().size());
+                System.out.println(g.getChildren(v.bigHashCode()).edgeSet());
+                System.out.println("Existing parent edge " + g.getParents(v.bigHashCode()).edgeSet().size());
+                System.out.println(g.getParents(v.bigHashCode()).edgeSet());
+            }*/
         }
         return pidmap;
     }
@@ -146,18 +157,20 @@ public class GraphWlog {
     }
 
     public static void main(String[] args){
-        runPartitioning("GET ","nginx","nginx.dot",true);
-        runPartitioning("FTP session closed", "proftpd","proftpd.dot",false);
+        runPartitioning("GET ","nginx","nginx2.dot",true);
+        //runPartitioning("FTP session closed", "proftpd","proftpd.dot",false);
 
         //Graph g2 = generatePrunedGraph("ftpbench");
     }
 
     private static void runPartitioning(String logKeyword, String process, String dotfile, boolean shortenLog) {
         GraphWlog wlog = new GraphWlog("/Users/pubalidatta/UIUC/projects/SPADE/graphdots/" + dotfile);
+
         wlog.graftApplicationNodes();
         NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
         n.partitionExecution(process,logKeyword);
         Graph g1 = wlog.generateLineageGraph(process);
-        exportDotGraph(g1,process+lineageGraphString, logKeyword, shortenLog);
+        exportDotGraph(g1,process+"2"+lineageGraphString, logKeyword, shortenLog);
+        //exportDotGraph(n.getGraph(),process+"2"+lineageGraphString, logKeyword, shortenLog);
     }
 }

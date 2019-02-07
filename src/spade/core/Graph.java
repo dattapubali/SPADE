@@ -238,7 +238,8 @@ public class Graph extends AbstractStorage implements Serializable
 //            edgeIndexWriter.addDocument(doc);
 //            edgeIndexWriter.commit();
 
-            String hashCode = incomingEdge.getChildVertex().bigHashCode() + incomingEdge.getParentVertex().bigHashCode();
+            //String hashCode = incomingEdge.getChildVertex().bigHashCode() + incomingEdge.getParentVertex().bigHashCode();
+            String hashCode = incomingEdge.bigHashCode();
             edgeIdentifiers.put(hashCode, incomingEdge);
             reverseEdgeIdentifiers.put(incomingEdge, hashCode);
             edgeSet.add(incomingEdge);
@@ -256,9 +257,10 @@ public class Graph extends AbstractStorage implements Serializable
         {
             return false;
         }
-        String hashCode = edge.getChildVertex().bigHashCode() + edge.getParentVertex().bigHashCode();
-        edgeIdentifiers.remove(hashCode, edge);
-        reverseEdgeIdentifiers.remove(edge, hashCode);
+        //String hashCode = edge.getChildVertex().bigHashCode() + edge.getParentVertex().bigHashCode();
+        String hashCode = edge.bigHashCode();
+        edgeIdentifiers.remove(hashCode);
+        reverseEdgeIdentifiers.remove(edge);
         edgeSet.remove(edge);
         serial_number--;
         return true;
@@ -269,8 +271,8 @@ public class Graph extends AbstractStorage implements Serializable
             return false;
         }
         String hashCode = vertex.bigHashCode();
-        vertexIdentifiers.remove(hashCode, vertex);
-        reverseVertexIdentifiers.remove(vertex, hashCode);
+        vertexIdentifiers.remove(hashCode);
+        reverseVertexIdentifiers.remove(vertex);
         vertexSet.remove(vertex);
         serial_number--;
         return true;
@@ -280,16 +282,52 @@ public class Graph extends AbstractStorage implements Serializable
         if (!reverseVertexIdentifiers.containsKey(vertex)) {
             return false;
         }
-        String oldhash = reverseEdgeIdentifiers.get(vertex);
+        String oldhash = reverseVertexIdentifiers.get(vertex);
 
         vertex.addAnnotation(key,val);
         String newhash = vertex.bigHashCode();
 
-        vertexIdentifiers.remove(oldhash, vertex);
+        vertexIdentifiers.remove(oldhash);
         vertexIdentifiers.put(newhash, vertex);
 
         reverseVertexIdentifiers.put(vertex, newhash);
         return true;
+    }
+
+    public boolean updateChild(AbstractEdge edge, AbstractVertex vertex){
+        if (!reverseVertexIdentifiers.containsKey(vertex) || !reverseEdgeIdentifiers.containsKey(edge)) {
+            return false;
+        }
+        String oldhash = edge.bigHashCode();
+
+        edge.setChildVertex(vertex);
+        String newhash = edge.bigHashCode();
+
+        edgeIdentifiers.remove(oldhash);
+        reverseEdgeIdentifiers.remove(edge);
+
+        edgeIdentifiers.put(newhash, edge);
+        reverseEdgeIdentifiers.put(edge,newhash);
+        return true;
+
+    }
+
+    public boolean updateParent(AbstractEdge edge, AbstractVertex vertex){
+        if (!reverseVertexIdentifiers.containsKey(vertex) || !reverseEdgeIdentifiers.containsKey(edge)) {
+            return false;
+        }
+        String oldhash = edge.bigHashCode();
+
+        edge.setParentVertex(vertex);
+        String newhash = edge.bigHashCode();
+
+        edgeIdentifiers.remove(oldhash);
+        reverseEdgeIdentifiers.remove(edge);
+
+        edgeIdentifiers.put(newhash, edge);
+        reverseEdgeIdentifiers.put(edge,newhash);
+        return true;
+
     }
 
     public void commitIndex() {
