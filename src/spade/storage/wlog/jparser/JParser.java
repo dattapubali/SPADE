@@ -161,6 +161,8 @@ public class JParser {
 			return MessageFormat.format("< {0} >", (String)node.GetAttribute("val"));
 		}
 		
+
+
 		/**
 		 * IsLikelyNewExecutionUnit - Check if this state is likely the start of a new execution unit
 		 * 
@@ -215,7 +217,7 @@ public class JParser {
 						// add current path to history
 						history.add(new LinkedList<State> (path));
 
-						// l.debug("Clearing the current path and resetting");
+						l.debug("Clearing the current path and resetting");
 						path.clear();
 						path.add(nstate);
 						nstate.SetMatchType(JMatchType.Heuristic);
@@ -250,7 +252,11 @@ public class JParser {
 					nstate.SetMatchType(JMatchType.Sequential);
 					path.add(nstate);
 				}
+				l.debug(path);
 			}
+            // add the last parsed path to history
+            history.add(new LinkedList<State> (path));
+			l.debug(history);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return;
