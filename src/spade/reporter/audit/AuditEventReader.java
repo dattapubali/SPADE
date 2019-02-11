@@ -154,7 +154,7 @@ public class AuditEventReader {
 	// Group 2: type
 	// Group 3: time
 	// Group 4: recordid
-	private final Pattern pattern_message_start = Pattern.compile("(?:node=(\\S+) )?type=(.+) msg=audit\\(([0-9\\.]+)\\:([0-9]+)\\):\\s*");
+	private final static Pattern pattern_message_start = Pattern.compile("(?:node=(\\S+) )?type=(.+) msg=audit\\(([0-9\\.]+)\\:([0-9]+)\\):\\s*");
 	
 	// Group 1: cwd
 	//cwd is either a quoted string or an unquoted string in which case it is in hex format
@@ -783,5 +783,9 @@ public class AuditEventReader {
         keyValPairs.put("pid",pid);
         keyValPairs.put("log",applog);
         return keyValPairs;
+    }
+
+    public static Pattern getMatcherPattern(){
+	    return pattern_message_start;
     }
 }

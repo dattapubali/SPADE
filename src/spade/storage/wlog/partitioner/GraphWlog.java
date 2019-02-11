@@ -25,11 +25,13 @@ public class GraphWlog {
     private Map<String,String> pidVertexMap = null;
 
     private String processName = null;
+    private String jparserStartString = null;
 
-    public GraphWlog(String dotfilepath, String process, JParser jparser){
+    public GraphWlog(String dotfilepath, String process, JParser jparser, String jparserStartString){
         importModifiedSpadeGraph(dotfilepath);
         this.processName = process;
         this.jParser = jparser;
+        this.jparserStartString = jparserStartString;
     }
 
     public Graph getSpadeGraph(){
@@ -195,9 +197,11 @@ public class GraphWlog {
             JParser jparser = new JParser(res.getString("input"), res.getString("log"),
                     res.getBoolean("watch"), matcher, res.getInt("lookahead"));
             String start = res.getBoolean("simulate")? "start" : "first";
-            jparser.parseAndMatch(start);
+            // Do not parse and match over the entire log
+            // Give it ordered pid specific logs
+            // jparser.parseAndMatch(start);
 
-            wlog = new GraphWlog(res.getString("dot"), res.getString("process"), jparser);
+            wlog = new GraphWlog(res.getString("dot"), res.getString("process"), jparser, start);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
         }
@@ -208,14 +212,13 @@ public class GraphWlog {
     private static void runPartitioning(GraphWlog wlog, boolean shortenLog) {
         wlog.graftApplicationNodes();
         NodeSplitter n = new NodeSplitter(wlog.getSpadeGraph());
-        n.partitionExecution(wlog.processName,wlog.jParser);
+        n.partitionExecution(wlog.processName,wlog.jParser, wlog.jparserStartString);
         Graph g1 = wlog.generateLineageGraph(wlog.processName);
-        //exportDotGraph(g1,wlog.processName+ConstantVals.lineageGraphString, shortenLog);
+        exportDotGraph(g1,wlog.processName+ConstantVals.lineageGraphString,n.getLogKeyWord(), shortenLog);
     }
 
     public static void main(String[] args){
         GraphWlog wlog = parseArguments(args);
         runPartitioning(wlog,true);
-
     }
 }

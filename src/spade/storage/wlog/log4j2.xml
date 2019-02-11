@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
-	<Appenders>
-		<Console name="Console" target="SYSTEM_OUT">
-			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-		</Console>
-	</Appenders>
-	<Loggers>
-		<Logger name="jgraph.GraphParser" level="info"/>
-		<Root level="error">
-		  <AppenderRef ref="Console"/>
-		</Root>
-		<Logger name="jparser.BackwardMatcher" level="debug"></Logger>
-		<Logger name="jparser.RegexMatcher" level="info"></Logger>
-		<Logger name="jparser.JParser" level="debug"></Logger>
-	</Loggers>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="spade.storage.wlog.partitioner.GraphWlog" level="debug"></Logger>
+        <Logger name="spade.storage.wlog.partitioner.NodeSplitter" level="debug"></Logger>
+        <Logger name="spade.storage.wlog.jgraph.GraphParser" level="info"/>
+        <Root level="error">
+            <AppenderRef ref="Console"/>
+        </Root>
+        <Logger name="spade.storage.wlog.jparser.BackwardMatcher" level="debug"></Logger>
+        <Logger name="spade.storage.wlog.jparser.RegexMatcher" level="info"></Logger>
+        <Logger name="spade.storage.wlog.jparser.JParser" level="debug"></Logger>
+    </Loggers>
 </Configuration>
