@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,8 +43,23 @@ public class JParser {
 	// Note that is history contains more than one vector, then it is likely that the start of each
 	// vector is the head of a new execution unit.
 	private List<List<State>> 	history;
-
 	
+	// @curr_log_id is the id of the current log entry being parsed. This will generally correspond to
+	// the line number of the entry in the log file for fast lookup later on.
+	private int curr_log_id;
+	
+	// @id_to_log maps each identifier to a log message. This is a one to one mapping.
+	private Map<Integer, String> id_to_log;
+	
+	// @log_to_id is the reverse of above map, however it might not maintain the one to 
+	// one mapping since two log messages might have the same text. In that case, the 
+	// map will hold all the possible identifier values.
+	private Map<String, List<Integer>> log_to_id;
+	
+	// @id_to_state is a mapping from a log message identifier (assumed to be an integer in
+	// this case) to the corresponding matched state.
+	private Map<Integer, State> id_to_state;
+
 	private ULogGraph graph;
 	
 	public enum JMatchType {
@@ -64,6 +80,12 @@ public class JParser {
 		expr		= _e;
 		lookahead 	= _lk;
 		
+		// maintain the mappings
+		curr_log_id = 0;
+		id_to_log = new HashMap<Integer, String>();
+		log_to_id = new HashMap<String, List<Integer>> ();
+		id_to_state = new HashMap<Integer, State>();
+		
 		if (watch) {
 			l.error("Watch mode is not yet supported");
 			System.exit(-UnsupportedOperation);
@@ -77,6 +99,98 @@ public class JParser {
 		path 	= new LinkedList<State> ();
 		history = new LinkedList<List<State>> ();
 	}
+	
+	/**
+	 * GetNextLogId - Get the next available ID for the log messages.
+	 * Overload this function if we need to change the type of the identifier
+	 * for each log message
+	 * 
+	 * @return the next identifier to be used
+	 */
+	private int GetNextLogId() {
+		return curr_log_id++;
+	}
+	
+	/**
+	 * Add a log entry to maintained list of entries and update the reverse map
+	 * 
+	 * @param logMsg: The log message to keep track of 
+	 */
+	public void AddLogEntry(int id, String logMsg) {
+		// keep the direct mapping
+		id_to_log.put(id, logMsg);
+		
+		// maintain the reverse mapping
+		if (log_to_id.containsKey(logMsg)) {
+			List<Integer> llist = log_to_id.get(logMsg);
+			llist.add(id);
+		} else {
+			List<Integer> llist = new LinkedList<Integer>();
+			llist.add(id);
+			log_to_id.put(logMsg, llist);
+		}
+	}
+	
+	/**
+	 * GetMatchingIds - Helper to get the possible matching ids for a log message
+	 * 
+	 * @param logMsg: The log message we are working with 
+	 * 
+	 * @return a list of possible matching ids.
+	 */
+	public List<Integer> GetMatchingIds(String logMsg) {
+		return log_to_id.get(logMsg);
+	}
+
+	
+	/**
+	 * GetStateForLog - Get the matching state for a given log message using its identifier
+	 * 
+	 * @param logId: The identifier for the log message 
+	 * 
+	 * @return a unique state matching for the log message or None
+	 */
+	public State GetStateForLog(int logId) {
+		return id_to_state.get(logId);
+	}
+	
+	/**
+	 * GetStateForLog - Get the possible matching states for a given log message.
+	 * 
+	 * @param logMsg: The log message to check for
+	 * 
+	 * @return a list of possible matching states.
+	 */
+	public List<State> GetStateForLog(String logMsg) {
+		List<Integer> llist = GetMatchingIds(logMsg);
+		
+		if (llist != null) {
+			List<State> listOfStates = new LinkedList<State>();
+			for (int id : llist) {
+				State s = GetStateForLog(id);
+				if (s != null) {
+					listOfStates.add(s);
+				}
+			}
+			
+			return listOfStates;
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * GetLogFromStatet - Get the log message that matched to this state
+	 * 
+	 * @param s:		The state we are working with 
+	 * 
+	 * @return the log message that matched to the state, null otherwise.
+	 */
+	public String GetLogFromState(State s) {
+		int logId = s.GetMatchId();
+		
+		return id_to_log.get(logId);
+	}
 
 	public class State {
 		private ULogNode 	node;
@@ -85,6 +199,9 @@ public class JParser {
 		private JMatchType  matchType;
 		// the number of times we couldn't get out of this state
 		private int			holdingTime;
+		
+		// the id of the log message that matched to this state
+		private int 		matchId;
 
 		// should never be access publicly
 		private Set<ULogNode> visited;
@@ -96,6 +213,7 @@ public class JParser {
 			visited  	= null;
 			matchType 	= JMatchType.Unknown;
 			holdingTime = 0;
+			matchId     = -1;
 		}
 		
 		public ULogNode GetData() {
@@ -120,6 +238,14 @@ public class JParser {
 		
 		public int GetHoldingTime() {
 			return holdingTime;
+		}
+		
+		public int GetMatchId() {
+			return matchId;
+		}
+		
+		public void SetMatchId(int id) {
+			matchId = id;
 		}
 		
 		public int IncreaseHoldingTime() {
@@ -161,8 +287,6 @@ public class JParser {
 			return MessageFormat.format("< {0} >", (String)node.GetAttribute("val"));
 		}
 		
-
-
 		/**
 		 * IsLikelyNewExecutionUnit - Check if this state is likely the start of a new execution unit
 		 * 
@@ -192,6 +316,11 @@ public class JParser {
 		try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
 			for (String line; (line = br.readLine()) != null; ) {
 				l.debug("==> Processing line: {}", line);
+				
+				// register the log message
+				int lineId = GetNextLogId(); // this will start from 0!
+				AddLogEntry(lineId, line);
+
 				State nstate = sstate;
 				if (sstate == null) {
 					sstate = FindStartingState(line);
@@ -221,6 +350,8 @@ public class JParser {
 						path.clear();
 						path.add(nstate);
 						nstate.SetMatchType(JMatchType.Heuristic);
+						id_to_state.put(lineId, nstate);
+						nstate.SetMatchId(lineId);
 						
 						continue;
 					}
@@ -245,18 +376,35 @@ public class JParser {
 						l.debug("=> Advancing with lookahead from {} to {}", sstate, nstate);
 						sstate = nstate;
 						path.add(nstate);
+						id_to_state.put(lineId, nstate);
+						nstate.SetMatchId(lineId);
 					}
 				} else {
 					l.debug("=> Advancing sequentially from {} to {}", sstate, nstate);
-					sstate = nstate;
-					nstate.SetMatchType(JMatchType.Sequential);
+					if (sstate != nstate) { // only do this when not starting!
+						sstate = nstate;
+						nstate.SetMatchType(JMatchType.Sequential);
+					}
 					path.add(nstate);
+					id_to_state.put(lineId, nstate);
+					nstate.SetMatchId(lineId);
 				}
 				l.debug(path);
 			}
-            // add the last parsed path to history
-            history.add(new LinkedList<State> (path));
-			l.debug(history);
+
+			// add the last parsed path to history
+			history.add(new LinkedList<State> (path));
+			
+			// print the states and their corresponding log messages!
+			/*
+			for (List<State> llist : history) {
+				for (State s : llist) {
+					l.debug("State {} matched with log message: {}",
+							s, GetLogFromState(s));
+				}
+			}
+			*/
+
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return;
