@@ -2,7 +2,6 @@ package spade.storage.wlog.partitioner;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import scala.collection.immutable.Stream;
 import spade.core.AbstractEdge;
 import spade.core.AbstractVertex;
 import spade.core.Graph;
@@ -38,9 +37,6 @@ public class NodeSplitter {
             if(processNode.getAnnotation(ConstantVals.ann_name).equalsIgnoreCase(process)){
                 l.info("Found vertex with procname "+processNode.getAnnotation(ConstantVals.ann_name)+" "
                         +processNode.getAnnotation(ConstantVals.ann_pid));
-                //int numedge = g.getChildren(vertexhash).edgeSet().size() + g.getParents(vertexhash).edgeSet().size();
-                //l.info("Number of edges "+ numedge);
-                //splitNode(processNode,entry.getValue(), logMsg); // Hard coded log split
 
                 JParser parserForPid = new JParser(jParser.getInFile(), jParser.getLogFile(), jParser.isWatch(), jParser.getExprMatcher(),jParser.getLookahead());
 
@@ -93,16 +89,12 @@ public class NodeSplitter {
             String logstring = v.getAnnotation(ConstantVals.ann_log);
             String splitEventid = v.getAnnotation(AuditEventReader.EVENT_ID);
 
-            //whether to partition or not
-            //boolean isPartitioningUnit = jParser.GetStateForLog(jParser.getLogIdforEvent(splitEventid)).IsLikelyNewExecutionUnit(); // when jparser reads from raw log file
 
             JParser.State state = null;
-            l.debug("id={}, log={} ",i,logstring);
-            l.debug("State is: "+jParser.GetStateForLog(i));
+            //l.debug("id={}, log={} ",i,logstring);
+            //l.debug("State is: "+jParser.GetStateForLog(i));
             boolean isPartitioningUnit = (state=jParser.GetStateForLog(i))!=null?state.IsLikelyNewExecutionUnit():false;
 
-            if(state!=null)
-                l.debug("Is state new partition unit? "+state.IsLikelyNewExecutionUnit());
 
             if(isPartitioningUnit){
                 l.debug("Going to split node now: "+logstring);

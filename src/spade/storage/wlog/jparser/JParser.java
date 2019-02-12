@@ -35,52 +35,34 @@ public class JParser {
 
     private static final int UnsupportedOperation = 1;
 
+    private String inFile;
+    private String logFile;
+    private boolean watch;
+    private int lookahead;
+    private FormatMatcher expr;
+
     public String getInFile() {
         return inFile;
     }
 
-    public void setInFile(String inFile) {
-        this.inFile = inFile;
-    }
 
     public String getLogFile() {
         return logFile;
     }
 
-    public void setLogFile(String logFile) {
-        this.logFile = logFile;
-    }
 
     public boolean isWatch() {
         return watch;
     }
 
-    public void setWatch(boolean watch) {
-        this.watch = watch;
-    }
 
     public int getLookahead() {
         return lookahead;
     }
 
-    public void setLookahead(int lookahead) {
-        this.lookahead = lookahead;
-    }
-
-    private String inFile;
-    private String logFile;
-    private boolean watch;
-    private int lookahead;
-
     public FormatMatcher getExprMatcher() {
         return expr;
     }
-
-    public void setExpr(FormatMatcher expr) {
-        this.expr = expr;
-    }
-
-    private FormatMatcher expr;
 
     // @path is the current path being built by the parser as it is parsing and matching!
     private List<State> path;
@@ -347,7 +329,7 @@ public class JParser {
         }
     }
 
-    public void parseAndMatch(String start_from) {
+   /* public void parseAndMatch(String start_from) {
         State sstate = null;
         if (start_from == "start") {
             sstate = new State(graph.FindStartNode(), graph, 0);
@@ -359,7 +341,7 @@ public class JParser {
         // start matching from here
         if (sstate != null) path.add(sstate);
 
-        /** Main parsing loop starts here **/
+        //---- Main parsing loop starts here -------//
         try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
             for (String line; (line = br.readLine()) != null; ) {
 
@@ -453,14 +435,13 @@ public class JParser {
             history.add(new LinkedList<State>(path));
 
             // print the states and their corresponding log messages!
-			/*
+			//
 			for (List<State> llist : history) {
 				for (State s : llist) {
 					l.debug("State {} matched with log message: {}",
 							s, GetLogFromState(s));
 				}
 			}
-			*/
 			l.debug(history);
 
         } catch (FileNotFoundException e) {
@@ -470,7 +451,7 @@ public class JParser {
             e.printStackTrace();
             return;
         }
-    }
+    }*/
 
     public void parseAndMatch(String start_from, List<String> logs) {
         if(logs==null || logs.isEmpty())
@@ -570,12 +551,11 @@ public class JParser {
             // add the last parsed path to history
             history.add(new LinkedList<State>(path));
 
-
-            l.debug(history);
-            l.debug(id_to_state);
+            //l.debug(history);
+            //l.debug(id_to_state);
         }
 
-    // Process audit.log string to remove metadata and make it compatible with jparser (Pubali)
+        // Process audit.log string to remove metadata and make it compatible with jparser (Pubali)
     public Pair<String, String> processAuditLogStringFromFile(String line) {
         String data = null;
         String eventId = null;
@@ -593,9 +573,6 @@ public class JParser {
 
             data = line.substring(logstartidx+2,exeidx);
             data.trim();
-
-            // remove leading and trailing non-alpha-numerics
-            //applog = applog.replaceAll("^[^a-zA-Z0-9\\s]+|[^a-zA-Z0-9\\s]+$", "");
         }
         return new Pair<>(eventId,data);
     }
@@ -828,18 +805,10 @@ public class JParser {
 					res.getBoolean("watch"), matcher, res.getInt("lookahead"));
 			
 			String start = res.getBoolean("simulate")? "start" : "first";
-			jparser.parseAndMatch(start);
+			//jparser.parseAndMatch(start);
 		} catch (ArgumentParserException e) {
 			parser.handleError(e);
 		}
 	}
 
-    /*public static void main(String args[]) {
-
-        String line = "node=wlog type=USER msg=audit(1547929719.883:59176): pid=30905 uid=0 auid=1000 ses=54 msg='PID:30892##Jan 19 20:28:39 wlog proftpd[30892] wlog.default (localhost.localdomain[127.0.0.1]): FTP session opened. exe=\"/sbin/auditctl\" hostname=? addr=? terminal=? res=success'";
-        String line2 = "node=wlog type=SYSCALL msg=audit(1547929719.879:59172): arch=c000003e syscall=72 success=yes exit=0 a0=e a1=4 a2=802 a3=7f3a104f3248 items=0 ppid=18782 pid=30881 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=pts2 ses=54 comm=\"ftpbench\" exe=\"/usr/bin/python2.7\" key=(null)";
-        String line3 = "node=wlog type=USER_START msg=audit(1547929711.127:57526): pid=30874 uid=0 auid=1000 ses=54 msg='op=PAM:session_open acct=\"root\" exe=\"/usr/bin/sudo\" hostname=? addr=? terminal=/dev/pts/2 res=success'";
-        Matcher applogMatcher = appLogPattern.matcher(line2);
-        if(applogMatcher.find()) System.out.println("found");
-    }*/
 }
