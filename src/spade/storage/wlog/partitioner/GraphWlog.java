@@ -15,10 +15,15 @@ import spade.storage.wlog.jparser.JParser;
 import spade.storage.wlog.jparser.RegexMatcher;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GraphWlog {
 
     private static final Logger l = LogManager.getLogger(JParser.class.getName());
+
+    // The following pattern gets everything between quotes
+    //private static final Pattern logmsgPattern = Pattern.compile("([\"'])(?:(?=(\\\\?))\\2.)*?\\1");
 
     private Graph spadeGraph = null;
     private JParser jParser = null;
@@ -144,12 +149,16 @@ public class GraphWlog {
 
             //editing the log msg here
             String msg = v.getAnnotation(ConstantVals.ann_log);
-            int startindex = keyword!=null? msg.indexOf(keyword):0;
-            if(startindex <0) startindex = 0;
 
-            int endindex = msg.length() > startindex+ConstantVals.loglength? startindex+ConstantVals.loglength : msg.length();
+            //int startindex = keyword!=null? msg.indexOf(keyword):0;
+            //if(startindex <0) startindex = 0;
+            //int endindex = msg.length() > startindex+ConstantVals.loglength? startindex+ConstantVals.loglength : msg.length();
+            //g.addAnnotationToVertex(v, ConstantVals.ann_log, msg.substring(startindex, endindex));
+            //Matcher m = logmsgPattern.matcher(msg);
 
-            g.addAnnotationToVertex(v, ConstantVals.ann_log, msg.substring(startindex, endindex));
+            int startindex = msg.length()>30? msg.length()-30:0;
+            g.addAnnotationToVertex(v, ConstantVals.ann_log, msg.substring(startindex));
+
         }
     }
 
@@ -217,8 +226,9 @@ public class GraphWlog {
         exportDotGraph(g1,wlog.processName+ConstantVals.lineageGraphString,n.getLogKeyWord(), shortenLog);
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         GraphWlog wlog = parseArguments(args);
         runPartitioning(wlog,true);
+        //String msg = "Jan 19 20:28:39 wlog proftpd[30892] wlog.default (localhost.localdomain[127.0.0.1]): FTP session opened.";
     }
 }

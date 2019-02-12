@@ -789,6 +789,7 @@ public class JParser {
     }
 
     private int CheckLogMatch(String fmt, String line) {
+        l.debug("fmt={} line={}",fmt,line);
         return expr.IsMatch(fmt, line);
     }
 	
