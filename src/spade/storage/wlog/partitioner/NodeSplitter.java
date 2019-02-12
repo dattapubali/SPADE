@@ -38,8 +38,8 @@ public class NodeSplitter {
             if(processNode.getAnnotation(ConstantVals.ann_name).equalsIgnoreCase(process)){
                 l.info("Found vertex with procname "+processNode.getAnnotation(ConstantVals.ann_name)+" "
                         +processNode.getAnnotation(ConstantVals.ann_pid));
-                int numedge = g.getChildren(vertexhash).edgeSet().size() + g.getParents(vertexhash).edgeSet().size();
-                l.info("Number of edges "+ numedge);
+                //int numedge = g.getChildren(vertexhash).edgeSet().size() + g.getParents(vertexhash).edgeSet().size();
+                //l.info("Number of edges "+ numedge);
                 //splitNode(processNode,entry.getValue(), logMsg); // Hard coded log split
 
                 JParser parserForPid = new JParser(jParser.getInFile(), jParser.getLogFile(), jParser.isWatch(), jParser.getExprMatcher(),jParser.getLookahead());
@@ -77,7 +77,15 @@ public class NodeSplitter {
         // Find the partitioning unit
         AbstractVertex[] vertexArr = buildVertexArray(vertices);
         Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
-        printArray(vertexArr);
+        //printArray(vertexArr);
+
+        List<String> logList = new ArrayList<>();
+        for(int i=0; i< vertexArr.length; i++){
+            logList.add(vertexArr[i].getAnnotation(ConstantVals.ann_log));
+        }
+        //l.debug(logList);
+        jParser.parseAndMatch(jparserStartString,logList);
+
 
         for(int i =0 ; i < vertexArr.length; i++){
             AbstractVertex v = vertexArr[i];
@@ -86,14 +94,16 @@ public class NodeSplitter {
             String splitEventid = v.getAnnotation(AuditEventReader.EVENT_ID);
 
             //whether to partition or not
-            boolean isPartitioningUnit = jParser.GetStateForLog(jParser.getLogIdforEvent(splitEventid)).IsLikelyNewExecutionUnit();
+            //boolean isPartitioningUnit = jParser.GetStateForLog(jParser.getLogIdforEvent(splitEventid)).IsLikelyNewExecutionUnit(); // when jparser reads from raw log file
+
+            JParser.State state = null;
+            boolean isPartitioningUnit = (state=jParser.GetStateForLog(i))!=null?state.IsLikelyNewExecutionUnit():false;
 
             if(isPartitioningUnit){
                 l.debug("Going to split node now: "+logstring);
                 if(splitLogKeyword==null){
                     splitLogKeyword = logstring.split("\\s+")[0];
                 }
-
 
                 // If splitpoint is at the beginning of the array no need to parition
                 if(i==0){
@@ -119,71 +129,6 @@ public class NodeSplitter {
 
     }
 
-    private void splitNode(AbstractVertex procnode, String processhash, String logMsg) {
-
-        int count = 1;
-        AbstractVertex lastNewNode = procnode;
-
-        // get children of the process (application logs are grafted as child nodes)
-        Graph childSubgraph = g.getChildren(processhash);
-
-        // The application logs are in the child subgraph
-        Set<AbstractVertex> vertices = childSubgraph.vertexSet();
-
-        // remove the process node itself
-        vertices.remove(procnode);
-
-        // remove nodes that are not application logs
-        Iterator<AbstractVertex> itr = vertices.iterator();
-        while(itr.hasNext()){
-            AbstractVertex v = itr.next();
-            if(!v.getAnnotation(ConstantVals.ann_type).equalsIgnoreCase(ConstantVals.ann_type_app))
-                itr.remove();
-        }
-
-
-        AbstractVertex[] vertexArr = buildVertexArray(vertices);
-        Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
-        //printArray(vertexArr);
-
-        
-
-        for(int i =0 ; i < vertexArr.length; i++){
-            AbstractVertex v = vertexArr[i];
-
-            String logstring = v.getAnnotation(ConstantVals.ann_log);
-            String splitEventid = v.getAnnotation(AuditEventReader.EVENT_ID);
-
-            // if the log msg is contained in the applog node then split the original procnode
-            if(logstring.toLowerCase().contains(logMsg.toLowerCase())){
-
-                System.out.println("Going to split node now");
-
-
-                // If splitpoint is at the end of the array handle that
-                if(i==vertexArr.length-1){
-                    if(!splitRequired(splitEventid,processhash,g))
-                        continue;
-                    System.out.println("Split true "+splitEventid);
-                }
-
-                AbstractVertex newNode = new Process();
-                newNode.addAnnotations(procnode.getAnnotations());
-                newNode.addAnnotation(ConstantVals.ann_name,procnode.getAnnotation(ConstantVals.ann_name));
-                newNode.addAnnotation(ConstantVals.ann_compnum, String.valueOf(count++));
-                g.putVertex(newNode);
-
-                //create an edge form the original node to this one
-                g.putEdge(new SimpleEdge(newNode,lastNewNode));
-
-
-                // move existing edges till splitpoint to the new node
-                boolean update = moveExistingEdges(splitEventid,newNode,processhash,g);
-                lastNewNode = newNode;
-
-            }
-        }
-    }
 
     private boolean splitRequired(String splitid, String processhash, Graph g) {
         boolean require = false;
@@ -306,3 +251,70 @@ public class NodeSplitter {
         return splitLogKeyword;
     }
 }
+
+/*
+*  private void splitNode(AbstractVertex procnode, String processhash, String logMsg) {
+
+        int count = 1;
+        AbstractVertex lastNewNode = procnode;
+
+        // get children of the process (application logs are grafted as child nodes)
+        Graph childSubgraph = g.getChildren(processhash);
+
+        // The application logs are in the child subgraph
+        Set<AbstractVertex> vertices = childSubgraph.vertexSet();
+
+        // remove the process node itself
+        vertices.remove(procnode);
+
+        // remove nodes that are not application logs
+        Iterator<AbstractVertex> itr = vertices.iterator();
+        while(itr.hasNext()){
+            AbstractVertex v = itr.next();
+            if(!v.getAnnotation(ConstantVals.ann_type).equalsIgnoreCase(ConstantVals.ann_type_app))
+                itr.remove();
+        }
+
+
+        AbstractVertex[] vertexArr = buildVertexArray(vertices);
+        Arrays.sort(vertexArr, Comparator.comparing(a -> Long.valueOf(a.getAnnotation(AuditEventReader.EVENT_ID))));
+        //printArray(vertexArr);
+
+
+        for(int i =0 ; i < vertexArr.length; i++){
+            AbstractVertex v = vertexArr[i];
+
+            String logstring = v.getAnnotation(ConstantVals.ann_log);
+            String splitEventid = v.getAnnotation(AuditEventReader.EVENT_ID);
+
+            // if the log msg is contained in the applog node then split the original procnode
+            if(logstring.toLowerCase().contains(logMsg.toLowerCase())){
+
+                System.out.println("Going to split node now");
+
+
+                // If splitpoint is at the end of the array handle that
+                if(i==vertexArr.length-1){
+                    if(!splitRequired(splitEventid,processhash,g))
+                        continue;
+                    System.out.println("Split true "+splitEventid);
+                }
+
+                AbstractVertex newNode = new Process();
+                newNode.addAnnotations(procnode.getAnnotations());
+                newNode.addAnnotation(ConstantVals.ann_name,procnode.getAnnotation(ConstantVals.ann_name));
+                newNode.addAnnotation(ConstantVals.ann_compnum, String.valueOf(count++));
+                g.putVertex(newNode);
+
+                //create an edge form the original node to this one
+                g.putEdge(new SimpleEdge(newNode,lastNewNode));
+
+
+                // move existing edges till splitpoint to the new node
+                boolean update = moveExistingEdges(splitEventid,newNode,processhash,g);
+                lastNewNode = newNode;
+
+            }
+        }
+    }
+*/

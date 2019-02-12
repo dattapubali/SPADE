@@ -144,7 +144,7 @@ public class GraphWlog {
 
             //editing the log msg here
             String msg = v.getAnnotation(ConstantVals.ann_log);
-            int startindex = msg.indexOf(keyword);
+            int startindex = keyword!=null? msg.indexOf(keyword):0;
             if(startindex <0) startindex = 0;
 
             int endindex = msg.length() > startindex+ConstantVals.loglength? startindex+ConstantVals.loglength : msg.length();

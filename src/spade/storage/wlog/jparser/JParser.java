@@ -364,7 +364,7 @@ public class JParser {
 
                 // Process log string (Added by pubali)
                 // and return (eventId, application log)
-                Pair<String,String> lineTuple = processAuditLogString(line);
+                Pair<String,String> lineTuple = processAuditLogStringFromFile(line);
                 if(lineTuple==null)
                     continue;
 
@@ -461,6 +461,7 @@ public class JParser {
 			}
 			*/
 			l.debug(history);
+			l.debug(id_to_state);
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -489,20 +490,11 @@ public class JParser {
         /** Main parsing loop starts here **/
             for (String line: logs ) {
 
-                // Process log string (Added by pubali)
-                // and return (eventId, application log)
-                Pair<String,String> lineTuple = processAuditLogString(line);
-                if(lineTuple==null)
-                    continue;
-
-                line = lineTuple.getValue();
-                l.debug("==> Processing line: {} with eventid {}", lineTuple.getValue(),lineTuple.getKey());
+                l.debug("==> Processing line: {}",line );
 
                 // register the log message
                 int lineId = GetNextLogId(); // this will start from 0!
                 AddLogEntry(lineId, line);
-                // Add eventId to logid mapping
-                eventId_to_logId.put(lineTuple.getKey(),lineId);
 
                 State nstate = sstate;
                 if (sstate == null) {
@@ -591,9 +583,8 @@ public class JParser {
 
         }
 
-
-    // Process Audit log string to remove metadata and make it compatible with jparser (Pubali)
-    public Pair<String, String> processAuditLogString(String line) {
+    // Process audit.log string to remove metadata and make it compatible with jparser (Pubali)
+    public Pair<String, String> processAuditLogStringFromFile(String line) {
         String data = null;
         String eventId = null;
 
