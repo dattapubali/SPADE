@@ -19,7 +19,7 @@ public class NodeSplitter {
 
     private Graph g;
     private Map<String,String> pidVertexMap = null;
-    private String splitLogKeyword = null;
+    private String splitLogKeyword = "";
 
     public NodeSplitter(Graph g){
         this.g = g;
@@ -97,11 +97,16 @@ public class NodeSplitter {
             //boolean isPartitioningUnit = jParser.GetStateForLog(jParser.getLogIdforEvent(splitEventid)).IsLikelyNewExecutionUnit(); // when jparser reads from raw log file
 
             JParser.State state = null;
+            l.debug("id={}, log={} ",i,logstring);
+            l.debug("State is: "+jParser.GetStateForLog(i));
             boolean isPartitioningUnit = (state=jParser.GetStateForLog(i))!=null?state.IsLikelyNewExecutionUnit():false;
+
+            if(state!=null)
+                l.debug("Is state new partition unit? "+state.IsLikelyNewExecutionUnit());
 
             if(isPartitioningUnit){
                 l.debug("Going to split node now: "+logstring);
-                if(splitLogKeyword==null){
+                if(splitLogKeyword==null || splitLogKeyword.isEmpty()){
                     splitLogKeyword = logstring.split("\\s+")[0];
                 }
 

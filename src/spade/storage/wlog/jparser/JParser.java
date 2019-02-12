@@ -342,7 +342,8 @@ public class JParser {
          */
         public Boolean IsLikelyNewExecutionUnit() {
             // TODO: update this to capture loop edges as well.
-            return matchType == JMatchType.Exhaustive || matchType == JMatchType.Heuristic;
+            return matchType == JMatchType.Exhaustive || matchType == JMatchType.Heuristic
+                    || matchType == JMatchType.Starting;
         }
     }
 
@@ -461,7 +462,6 @@ public class JParser {
 			}
 			*/
 			l.debug(history);
-			l.debug(id_to_state);
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -570,17 +570,9 @@ public class JParser {
             // add the last parsed path to history
             history.add(new LinkedList<State>(path));
 
-            // print the states and their corresponding log messages!
-			/*
-			for (List<State> llist : history) {
-				for (State s : llist) {
-					l.debug("State {} matched with log message: {}",
-							s, GetLogFromState(s));
-				}
-			}
-			*/
-            l.debug(history);
 
+            l.debug(history);
+            l.debug(id_to_state);
         }
 
     // Process audit.log string to remove metadata and make it compatible with jparser (Pubali)
