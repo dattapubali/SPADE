@@ -156,7 +156,7 @@ public class GraphWlog {
             //g.addAnnotationToVertex(v, ConstantVals.ann_log, msg.substring(startindex, endindex));
             //Matcher m = logmsgPattern.matcher(msg);
 
-            int startindex = msg.length()>30? msg.length()-30:0;
+            int startindex = msg.length()>ConstantVals.loglength? msg.length()-ConstantVals.loglength:0;
             g.addAnnotationToVertex(v, ConstantVals.ann_log, msg.substring(startindex));
 
         }
