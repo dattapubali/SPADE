@@ -42,6 +42,9 @@ public class RegexMatcher implements FormatMatcher {
 			return GetWordCount(fmt);
 		}
 		
+		// sanitize the format specifier
+		String fmtClean = CleanupString(fmt);
+		
 		// start matching backwards since usually, the logging functions will prepend 
 		// and not append things to the string.
 		int[] numConsts = new int[1];
@@ -118,10 +121,24 @@ public class RegexMatcher implements FormatMatcher {
 		return fmtMap.get(lastChar) + specifier.substring(len+1,  specifier.length());
 	}
 	
+	private String CleanupString(String in) {
+		StringBuilder sb = new StringBuilder();
+		for (Character c : in.toCharArray()) {
+			if (c == '*' || c == '+' || c == '?') {
+				sb.append("\\" + c);
+			} else {
+				sb.append(c);
+			}
+		}
+		
+		return sb.toString();
+	}
+	
 	public static void main(String[] args) {
 		String fmt = "This is a test: %s hello %d %0.8lf world %%s:";
 		String sshFmt = "Disconnected from %.200s port %d";
 		String sshLog = "Disconnected from user vagrant 192.168.121.1 port 42862";
+		String bad = "?%uA shutdown timeout ";
 
 		String in = "This is a test: world hello 55 12354 world %woops:";
 		String notin = "This is b test: world hello 55 12354 world %woops:";
@@ -133,6 +150,9 @@ public class RegexMatcher implements FormatMatcher {
 		l.info(bm.IsMatch(fmt, notin));
 		l.info(bm.IsMatch(fmt, in2));
 		l.info(bm.IsMatch(fmt, in3));
+		
+		l.info("{} becomes {}", bad, bm.CleanupString(bad));
+		l.info(bm.IsMatch(bad, in3));
 		
 		l.info("Checking {} with {}", sshFmt, sshLog);
 		l.info(bm.IsMatch(sshFmt, sshLog));
