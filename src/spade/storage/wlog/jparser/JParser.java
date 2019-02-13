@@ -627,7 +627,7 @@ public class JParser {
             // TODO WAJIH make sure that there is a best possible match here.
             // TODO count the number of non-format specifier and pick the one which has best word match
             int matchLength = expr.IsMatch(fmt, line);
-            if (matchLength > 0) {
+            if (matchLength >= 0) {
                 // found it, return it
                 l.debug("Found a match for {} in {}.", line, fmt);
                 matchingStates.add(new State(n, graph, matchLength));
@@ -657,7 +657,7 @@ public class JParser {
             // check for self loops
             if (n == state.GetData()) {
                 int matchLength = CheckLogMatch(n, line);
-                if (matchLength > 0) {
+                if (matchLength >= 0) {
                     matchingStates.add(new State(state.GetData(), graph, matchLength));
                 }
             } else {
@@ -693,7 +693,7 @@ public class JParser {
             // loop in this case
             if (n != node) {
                 int matchLength = CheckLogMatch(n, line);
-                if (matchLength > 0) {
+                if (matchLength >= 0) {
                     matchingStates.add(new State(n, graph, matchLength));
                 } else {
                     if (!visited.contains(n)) {
@@ -718,7 +718,7 @@ public class JParser {
         List<State> matchingStates = new LinkedList<State>();
         for (ULogNode node : graph.GetCache()) {
             int matchLength = CheckLogMatch(node, line);
-            if (matchLength > 0 && !node.IsStartNode()) {
+            if (matchLength >= 0 && !node.IsStartNode()) {
                 matchingStates.add(new State(node, graph, matchLength));
             }
         }
@@ -736,7 +736,7 @@ public class JParser {
         List<State> matchingStates = new LinkedList<State>();
         for (ULogNode node : graph.GetCache()) {
             int matchLength = CheckLogMatch(node, line);
-            if (matchLength > 0) {
+            if (matchLength >= 0) {
                 matchingStates.add(new State(node, graph, matchLength));
             }
         }
@@ -757,7 +757,7 @@ public class JParser {
             ULogNode node = entry.getValue();
             if (!(node.IsPhonyNode() || node.IsEndNode() || node.IsFuncHead() || node.IsFuncOut())) {
                 int matchLength = CheckLogMatch(node, line);
-                if (matchLength > 0) {
+                if (matchLength >= 0) {
                     matchingStates.add(new State(node, graph, matchLength));
                 }
             }

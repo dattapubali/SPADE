@@ -50,7 +50,7 @@ public class RegexMatcher implements FormatMatcher {
 		int[] numConsts = new int[1];
 		String regString = BuildRegexString(fmtClean, numConsts);
 		if (regString == null)
-			return 0;
+			return -1;
 		
 		// build the pattern
 		l.debug("Checking {} against {}", in, regString);
@@ -60,7 +60,7 @@ public class RegexMatcher implements FormatMatcher {
 		while (m.find()) {
 			return numConsts[0];
 		}
-		return 0;
+		return -1;
 	}
 	
 	/** GetWordCount - Obtain the word count in a string
@@ -92,7 +92,8 @@ public class RegexMatcher implements FormatMatcher {
 				continue;
 			}
 			
-			numConsts[0]--;
+			if (numConsts[0] > 0) 
+				numConsts[0]--;
 			result = result.replace(spec, expr);
 		}
 		
@@ -139,11 +140,13 @@ public class RegexMatcher implements FormatMatcher {
 		String sshFmt = "Disconnected from %.200s port %d";
 		String sshLog = "Disconnected from user vagrant 192.168.121.1 port 42862";
 		String bad = "?%uA shutdown timeout ";
+		String test = "%s";
 
 		String in = "This is a test: world hello 55 12354 world %woops:";
 		String notin = "This is b test: world hello 55 12354 world %woops:";
 		String in2 = "[Some logging info]: " + in;
 		String in3 = "[Some logging info]: " + notin;
+		String nginx = "192.168.122.1 - - [05/Feb/2019:23:20:53 +0000] 'GET / HTTP/1.0' 200 612 '-' 'ApacheBench/2.3' '-'";
 
 		RegexMatcher bm = new RegexMatcher();
 		l.info(bm.IsMatch(fmt, in));
@@ -156,5 +159,8 @@ public class RegexMatcher implements FormatMatcher {
 		
 		l.info("Checking {} with {}", sshFmt, sshLog);
 		l.info(bm.IsMatch(sshFmt, sshLog));
+		
+		l.info("Nginx test");
+		l.info(bm.IsMatch(test, nginx));
 	}
 }
