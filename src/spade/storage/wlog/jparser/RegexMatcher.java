@@ -48,7 +48,7 @@ public class RegexMatcher implements FormatMatcher {
 		// start matching backwards since usually, the logging functions will prepend 
 		// and not append things to the string.
 		int[] numConsts = new int[1];
-		String regString = BuildRegexString(fmt, numConsts);
+		String regString = BuildRegexString(fmtClean, numConsts);
 		if (regString == null)
 			return 0;
 		
