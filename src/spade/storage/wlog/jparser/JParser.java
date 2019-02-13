@@ -96,6 +96,16 @@ public class JParser {
         return eventId_to_logId.get(splitEventid);
     }
 
+    public boolean noPaths() {
+        if(history.isEmpty())
+            return true;
+        for(List<State> path: history){
+            if(!path.isEmpty())
+                return false;
+        }
+        return true;
+    }
+
     public enum JMatchType {
         Sequential, /* matched sequentially in the graph */
         Lookahead,  /* matched by performing lookahead */
@@ -486,7 +496,8 @@ public class JParser {
                     }
                     nstate = sstate;
                     // set the match type to starting state
-                    nstate.SetMatchType(JMatchType.Starting);
+                    if(nstate!=null)
+                        nstate.SetMatchType(JMatchType.Starting);
                 } else {
                     nstate = LookupNextState(sstate, line);
                 }

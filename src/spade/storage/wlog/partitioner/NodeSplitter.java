@@ -81,6 +81,7 @@ public class NodeSplitter {
         }
         //l.debug(logList);
         jParser.parseAndMatch(jparserStartString,logList);
+        boolean didJparserFail = jParser.noPaths();
 
 
         for(int i =0 ; i < vertexArr.length; i++){
@@ -96,7 +97,7 @@ public class NodeSplitter {
             boolean isPartitioningUnit = (state=jParser.GetStateForLog(i))!=null?state.IsLikelyNewExecutionUnit():false;
 
 
-            if(isPartitioningUnit){
+            if(didJparserFail || isPartitioningUnit){
                 l.debug("Going to split node now: "+logstring);
                 if(splitLogKeyword==null || splitLogKeyword.isEmpty()){
                     splitLogKeyword = logstring.split("\\s+")[0];
